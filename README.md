@@ -1,36 +1,58 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Code for Africa — Status Page
 
-## Getting Started
+A public status page (Upptime-style) backed by **Grafana Synthetic Monitoring**.
+It shows, per monitored service: current status, uptime % across 24h / 7d / 30d /
+1y windows, an uptime history bar strip, and a response-time chart — plus a
+per-service detail view at `/site/<id>`.
 
-First, run the development server:
+There is **no incidents feature** — this is purely the live uptime/latency view.
+
+## How it works
+
+Grafana Synthetics publishes probe results as Prometheus metrics into Grafana
+Cloud (Mimir). This app's **Server Components** query the Grafana Cloud Prometheus
+HTTP API directly (`lib/synthetics.ts` → `lib/prometheus.ts`), compute uptime and
+response time, and pass plain data to presentational components. The access token
+lives only on the server.
+
+- Services are **discovered dynamically** from `sm_check_info` — nothing is hardcoded.
+- Charts are **hand-rolled SVG** (zero chart dependencies).
+- Pages use ISR (`export const revalidate = 60`) and the Prometheus client caches
+  responses, so the public page is cheap to serve.
+
+If credentials are absent (or `MOCK=1`), the app serves **representative sample
+data** so you can develop and preview without secrets.
+
+## Setup
+
+1. Install deps: `npm install`
+2. Copy env and fill in your Grafana Cloud details:
+   ```bash
+   cp .env.example .env.local
+   ```
+   From **Grafana Cloud → your stack → Prometheus → Details**, grab:
+   - `GRAFANA_PROM_URL` — the query URL **including** `/api/prom`
+     (e.g. `https://prometheus-prod-24-prod-eu-west-2.grafana.net/api/prom`)
+   - `GRAFANA_PROM_USER` — the numeric **metrics instance ID** (basic-auth user)
+   - `GRAFANA_PROM_TOKEN` — an **Access Policy token** scoped `metrics:read`
+     (Grafana Cloud → Access Policies → create policy with `metrics:read`, then a token)
+
+3. **Confirm the metric schema on your stack** (recommended before relying on live data):
+   ```bash
+   node --env-file=.env.local scripts/introspect.mjs
+   ```
+   It prints which metric names exist and lists your checks. If the names differ
+   from the defaults, set the `SM_METRIC_*` overrides in `.env.local`.
+
+## Run
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run dev      # http://localhost:3000
+npm run build && npm start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Deploy
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Deploys cleanly to Vercel (or any Node host). Set the same env vars
+(`GRAFANA_PROM_URL`, `GRAFANA_PROM_USER`, `GRAFANA_PROM_TOKEN`, optional overrides)
+in the host's environment. Do **not** commit `.env.local`.
