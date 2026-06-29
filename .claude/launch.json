@@ -3,9 +3,8 @@
   "configurations": [
     {
       "name": "status",
-      "runtimeExecutable": "npm",
+      "runtimeExecutable": "pnpm",
       "runtimeArgs": [
-        "run",
         "dev"
       ],
       "port": 3000,

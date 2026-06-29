@@ -25,7 +25,7 @@ data** so you can develop and preview without secrets.
 
 ## Setup
 
-1. Install deps: `npm install`
+1. Install deps: `pnpm install`
 2. Copy env and fill in your Grafana Cloud details:
    ```bash
    cp .env.example .env.local
@@ -47,8 +47,8 @@ data** so you can develop and preview without secrets.
 ## Run
 
 ```bash
-npm run dev      # http://localhost:3000
-npm run build && npm start
+pnpm dev         # http://localhost:3000
+pnpm build && pnpm start
 ```
 
 ## Deploy
