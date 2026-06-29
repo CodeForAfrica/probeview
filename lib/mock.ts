@@ -8,6 +8,7 @@ import { deriveStatus } from "./format";
 import {
   WINDOW_KEYS,
   type CheckStatus,
+  type MetricByWindow,
   type ResponsePoint,
   type SiteHistory,
   type UptimeBucket,
@@ -70,6 +71,21 @@ function uptimeByWindow(site: MockSite): UptimeByWindow {
   return out;
 }
 
+function responseByWindow(site: MockSite): MetricByWindow {
+  const r = rng(hash(`${site.id}:resp`));
+  const out = {} as MetricByWindow;
+  for (const key of WINDOW_KEYS) {
+    if (!site.currentlyUp) {
+      out[key] = null;
+      continue;
+    }
+    // Slightly different averages per window so the toggle visibly changes them.
+    const v = site.baseMs * (0.85 + r() * 0.3);
+    out[key] = Math.round(v);
+  }
+  return out;
+}
+
 export function mockOverview(): CheckStatus[] {
   return MOCK_SITES.map((site) => {
     const uptime = uptimeByWindow(site);
@@ -82,7 +98,7 @@ export function mockOverview(): CheckStatus[] {
       region: site.region,
       status: deriveStatus(site.currentlyUp, uptime["24h"]),
       uptime,
-      responseMs: site.currentlyUp ? site.baseMs : null,
+      responseMs: responseByWindow(site),
     };
   });
 }

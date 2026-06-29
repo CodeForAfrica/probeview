@@ -33,8 +33,8 @@ export function Overview({ checks, updated }: { checks: CheckStatus[]; updated: 
     const dir = sort.dir === "asc" ? 1 : -1;
     return [...checks].sort((a, b) => {
       if (sort.key === "name") return dir * a.name.localeCompare(b.name);
-      const av = sort.key === "uptime" ? a.uptime[window] : a.responseMs;
-      const bv = sort.key === "uptime" ? b.uptime[window] : b.responseMs;
+      const av = sort.key === "uptime" ? a.uptime[window] : a.responseMs[window];
+      const bv = sort.key === "uptime" ? b.uptime[window] : b.responseMs[window];
       // Services with no data always sort to the bottom, regardless of direction.
       if (av == null && bv == null) return a.name.localeCompare(b.name);
       if (av == null) return 1;
@@ -118,9 +118,9 @@ export function Overview({ checks, updated }: { checks: CheckStatus[]; updated: 
                   <span className="block text-sm font-medium tabular-nums">{fmtPct(c.uptime[window])}</span>
                   <span className="block text-xs text-muted">{window} uptime</span>
                 </span>
-                <span className="w-20 text-right">
-                  <span className="block text-sm font-medium tabular-nums">{fmtMs(c.responseMs)}</span>
-                  <span className="block text-xs text-muted">response</span>
+                <span className="w-24 text-right">
+                  <span className="block text-sm font-medium tabular-nums">{fmtMs(c.responseMs[window])}</span>
+                  <span className="block text-xs text-muted">{window} response</span>
                 </span>
               </Link>
             </li>

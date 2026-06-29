@@ -22,15 +22,17 @@ export interface Check {
   region?: string;
 }
 
-export type UptimeByWindow = Record<WindowKey, number | null>;
+/** A numeric metric keyed by time window (uptime % or avg response ms). */
+export type MetricByWindow = Record<WindowKey, number | null>;
+export type UptimeByWindow = MetricByWindow;
 
 /** A check plus its current status and summary numbers (overview card). */
 export interface CheckStatus extends Check {
   status: Status;
   /** Uptime percentage (0–100) per window. */
   uptime: UptimeByWindow;
-  /** Latest average response time, milliseconds. */
-  responseMs: number | null;
+  /** Average response time (ms) per window. */
+  responseMs: MetricByWindow;
 }
 
 /** One time bucket of the uptime history bar strip. */
