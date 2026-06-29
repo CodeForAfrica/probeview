@@ -11,7 +11,7 @@ export interface RangeSeries {
   values: [number, string][];
 }
 
-class PrometheusError extends Error {}
+class PrometheusError extends Error { }
 
 async function call(
   path: "/api/v1/query" | "/api/v1/query_range" | "/api/v1/series",
@@ -20,7 +20,7 @@ async function call(
   if (!config.promUrl || !config.promUser || !config.promToken) {
     throw new PrometheusError(
       "Grafana Cloud Prometheus is not configured. Set GRAFANA_PROM_URL, " +
-        "GRAFANA_PROM_USER and GRAFANA_PROM_TOKEN in .env.local (or run with MOCK=1).",
+      "GRAFANA_PROM_USER and GRAFANA_PROM_TOKEN in .env.local (or run with MOCK=1).",
     );
   }
 
@@ -34,7 +34,6 @@ async function call(
       "Content-Type": "application/x-www-form-urlencoded",
     },
     body: new URLSearchParams(params).toString(),
-    // Cache at the data layer so the public page is cheap; revalidate in the bg.
     next: { revalidate: config.revalidate },
   });
 
