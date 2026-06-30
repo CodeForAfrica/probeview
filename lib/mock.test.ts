@@ -90,14 +90,12 @@ describe("mockSiteHistory", () => {
     const h = mockSiteHistory("african-drone", "24h")!;
     expect(h.status).toBe("down");
     expect(h.responseMs).toBeNull();
-    // The last two buckets represent the ongoing outage: heavily degraded...
-    for (const bar of h.bars.slice(-2)) {
-      expect(bar.uptime).toBeLessThanOrEqual(0.3);
-    }
-    // ...and a fully-down bucket carries no response sample.
-    for (const point of h.response.slice(-2)) {
-      const bar = h.bars[h.response.indexOf(point)];
-      if (bar.uptime === 0) expect(point.ms).toBeNull();
+    // The last two buckets represent the ongoing outage: each is heavily
+    // degraded, and a fully-down bucket carries no response sample. bars and
+    // response line up by index, so we zip them directly.
+    for (let i = h.bars.length - 2; i < h.bars.length; i++) {
+      expect(h.bars[i].uptime).toBeLessThanOrEqual(0.3);
+      if (h.bars[i].uptime === 0) expect(h.response[i].ms).toBeNull();
     }
   });
 

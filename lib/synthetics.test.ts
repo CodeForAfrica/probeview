@@ -89,6 +89,11 @@ describe("getOverview", () => {
 
   // Drives every overview query for a single check; `current` sets the
   // reachability value returned for the short [1h] window.
+  //
+  // Routing depends on mockConfig.currentWindow ("1h") being distinct from
+  // every WINDOW range (24h/7d/30d/1y) — the current query is matched by its
+  // "[1h]" range before the SUCCESS/DURATION branches. If currentWindow ever
+  // collides with a window range, the matching here would mis-route.
   const wireOverview = (current: string) =>
     prom.instantQuery.mockImplementation((q: string) => {
       if (q === "sm_info")

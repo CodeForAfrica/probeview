@@ -41,6 +41,9 @@ describe("bucketPlan", () => {
   });
 
   it("never lets the step drop below the 5-minute floor", () => {
+    // Note: every defined window yields a step far above 300s (1800s–350400s),
+    // so this asserts the invariant rather than exercising the Math.max floor
+    // branch — that branch is effectively dead for the current WINDOWS.
     for (const { key } of WINDOWS) {
       expect(bucketPlan(key as WindowKey, now).stepSec).toBeGreaterThanOrEqual(300);
     }
