@@ -1,0 +1,12 @@
+{
+  // Type-checks the test suite separately from the app build, so test code
+  // (and its `vitest` devDependency types) never gates `next build`. Run with
+  // `pnpm test:types`. Vitest itself transpiles via esbuild and does not
+  // type-check, so this is the only thing that checks test types.
+  "extends": "./tsconfig.json",
+  // `next-env.d.ts` carries Next's global type augmentations (e.g. the `next`
+  // option on fetch's RequestInit, used by lib/prometheus.ts) — include it so
+  // source pulled in by the tests type-checks the same way it does in the app.
+  "include": ["next-env.d.ts", "**/*.test.ts", "test", "vitest.config.mts"],
+  "exclude": ["node_modules"]
+}
