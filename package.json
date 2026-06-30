@@ -10,7 +10,8 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:types": "tsc -p tsconfig.test.json --noEmit"
+    "test:types": "tsc -p tsconfig.test.json --noEmit",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "next": "16.2.9",
@@ -22,6 +23,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitest/coverage-v8": "^4.1.9",
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
     "tailwindcss": "^4",

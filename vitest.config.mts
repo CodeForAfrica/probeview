@@ -9,6 +9,14 @@ export default defineConfig({
     // "jsdom"` (plus @vitejs/plugin-react) if/when we test React components.
     environment: "node",
     include: ["**/*.test.ts"],
+    coverage: {
+      provider: "v8",
+      // Report only on the lib/ logic under test (test files and the
+      // server-only stub are excluded by default / below).
+      include: ["lib/**/*.ts"],
+      exclude: ["lib/**/*.test.ts"],
+      reporter: ["text", "html"],
+    },
     alias: {
       // `server-only` throws if imported outside a React Server Component.
       // Stub it so server modules (prometheus.ts, synthetics.ts) can be
