@@ -1,0 +1,18 @@
+{
+  // Build-only TypeScript config. `next.config.ts` points Next at this via
+  // `typescript.tsconfigPath`, so `next build` / `next dev` type-check the app
+  // WITHOUT the test suite — test code and its devDependency types never gate
+  // the production build. The editor and `next build` differ on purpose:
+  //   - editor      -> tsconfig.json      (app + tests, so test files resolve)
+  //   - next build  -> tsconfig.build.json (app only)
+  //   - pnpm test:types -> tsconfig.test.json (tests + the source they import)
+  // `include` is inherited from the base config; we only narrow `exclude`.
+  "extends": "./tsconfig.json",
+  "exclude": [
+    "node_modules",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "test",
+    "vitest.config.mts"
+  ]
+}
