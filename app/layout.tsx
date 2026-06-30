@@ -42,7 +42,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             <span>
               {config.siteName} · {config.tagline}
             </span>
-            <span>Monitored with Grafana Synthetics</span>
+            <span>Powered by <a href="https://grafana.com/products/cloud/synthetic-monitoring/" target="_blank">Grafana Synthetics</a></span>
           </div>
         </footer>
       </body>
