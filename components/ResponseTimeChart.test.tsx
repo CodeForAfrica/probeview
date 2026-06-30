@@ -1,6 +1,6 @@
+import type { ResponsePoint } from "@/lib/types";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import type { ResponsePoint } from "@/lib/types";
 import { ResponseTimeChart } from "./ResponseTimeChart";
 
 function pts(...ms: (number | null)[]): ResponsePoint[] {
@@ -99,5 +99,17 @@ describe("ResponseTimeChart", () => {
     expect(screen.getByText("min 100 ms")).toBeInTheDocument();
     expect(screen.getByText("avg 200 ms")).toBeInTheDocument();
     expect(screen.getByText("max 300 ms")).toBeInTheDocument();
+  });
+
+  it("prefers window-consistent stats over the plotted points for the summary", () => {
+    // The plotted (downsampled) points peak at 300ms, but the fixed-resolution
+    // stats know the real peak was 7.56s. The footer must trust the stats so
+    // the figure stays comparable across windows.
+    render(
+      <ResponseTimeChart points={pts(100, 300)} stats={{ min: 90, avg: 410, max: 7560 }} />,
+    );
+    expect(screen.getByText("min 90 ms")).toBeInTheDocument();
+    expect(screen.getByText("avg 410 ms")).toBeInTheDocument();
+    expect(screen.getByText("max 7.56 s")).toBeInTheDocument();
   });
 });

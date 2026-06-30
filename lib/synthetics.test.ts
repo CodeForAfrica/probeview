@@ -217,4 +217,31 @@ describe("getSiteHistory", () => {
       { t: 300, ms: 260 },
     ]);
   });
+
+  it("derives min/avg/max from a fixed-resolution series, independent of the window's buckets", async () => {
+    prom.instantQuery.mockImplementation((q: string) => {
+      if (q === "sm_info")
+        return Promise.resolve([sample({ job: "Site A", instance: "https://a.org" }, "1")]);
+      // The summary stats query a fixed-resolution sub-series, matched first.
+      if (q.startsWith("min_over_time")) return Promise.resolve([sample({}, "180")]);
+      if (q.startsWith("avg_over_time")) return Promise.resolve([sample({}, "520")]);
+      if (q.startsWith("max_over_time")) return Promise.resolve([sample({}, "7560")]);
+      if (q.includes("[1h]")) return Promise.resolve([sample({}, "100")]); // current → up
+      if (q.includes("DURATION")) return Promise.resolve([sample({}, "240")]);
+      if (q.includes("SUCCESS")) return Promise.resolve([sample({}, "99.9")]);
+      return Promise.resolve([]);
+    });
+    prom.rangeQuery.mockResolvedValue([{ metric: {}, values: [[100, "240"]] }]);
+
+    const history = (await getSiteHistory("site-a", "7d"))!;
+
+    // The plotted line only reaches 240ms, but the summary reports the true
+    // fixed-resolution extremes — so it can't shrink on a wider window.
+    expect(history.responseStats).toEqual({ min: 180, avg: 520, max: 7560 });
+
+    // The extremes use a constant 1h resolution over the window (here [7d:1h]),
+    // not the chart's per-window bucket — that's what keeps 30d ≥ 7d.
+    const queries = prom.instantQuery.mock.calls.map((c) => c[0] as string);
+    expect(queries.some((q) => q.startsWith("max_over_time") && q.includes("[7d:1h]"))).toBe(true);
+  });
 });

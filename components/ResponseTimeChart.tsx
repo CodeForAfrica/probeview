@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import { fmtMs } from "@/lib/format";
-import type { ResponsePoint } from "@/lib/types";
+import type { ResponsePoint, ResponseStats } from "@/lib/types";
+import { useEffect, useRef, useState } from "react";
 
 const HEIGHT = 200; // total SVG height, in px
 const PAD = { top: 12, right: 12, bottom: 26, left: 48 };
@@ -33,7 +33,13 @@ function fmtStamp(t: number): string {
   });
 }
 
-export function ResponseTimeChart({ points }: { points: ResponsePoint[] }) {
+export function ResponseTimeChart({
+  points,
+  stats,
+}: {
+  points: ResponsePoint[];
+  stats?: ResponseStats | null;
+}) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(FALLBACK_W);
   // Index into `valid` of the point under the cursor, or null when not hovering.
@@ -233,9 +239,9 @@ export function ResponseTimeChart({ points }: { points: ResponsePoint[] }) {
       )}
 
       <div className="mt-2 flex justify-between text-xs text-muted">
-        <span>min {fmtMs(min)}</span>
-        <span>avg {fmtMs(avg)}</span>
-        <span>max {fmtMs(max)}</span>
+        <span>min {fmtMs(stats?.min ?? min)}</span>
+        <span>avg {fmtMs(stats?.avg ?? avg)}</span>
+        <span>max {fmtMs(stats?.max ?? max)}</span>
       </div>
     </div>
   );

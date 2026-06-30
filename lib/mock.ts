@@ -129,6 +129,15 @@ export function mockSiteHistory(id: string, window: WindowKey): SiteHistory | nu
     response.push({ t, ms });
   }
 
+  const samples = response.map((p) => p.ms).filter((ms): ms is number => ms != null);
+  const responseStats = samples.length
+    ? {
+      min: Math.min(...samples),
+      avg: Math.round(samples.reduce((s, ms) => s + ms, 0) / samples.length),
+      max: Math.max(...samples),
+    }
+    : { min: null, avg: null, max: null };
+
   return {
     check: {
       id: site.id,
@@ -144,5 +153,6 @@ export function mockSiteHistory(id: string, window: WindowKey): SiteHistory | nu
     window,
     bars,
     response,
+    responseStats,
   };
 }

@@ -1,14 +1,14 @@
-import Link from "next/link";
-import type { Metadata } from "next";
+import { ErrorPanel } from "@/components/Notice";
 import { ResponseTimeChart } from "@/components/ResponseTimeChart";
 import { StatusBadge } from "@/components/StatusBadge";
 import { UptimeBars } from "@/components/UptimeBars";
-import { ErrorPanel } from "@/components/Notice";
 import { ArrowLeft, ExternalLink } from "@/components/icons";
 import { config } from "@/lib/config";
 import { fmtMs, fmtPct } from "@/lib/format";
 import { getSiteHistory } from "@/lib/synthetics";
 import { WINDOWS, WINDOW_KEYS, type SiteHistory, type WindowKey } from "@/lib/types";
+import type { Metadata } from "next";
+import Link from "next/link";
 
 export const revalidate = 60;
 
@@ -54,8 +54,8 @@ export default async function SitePage({
   const rangeLabel =
     site.bars.length > 0
       ? `${new Date(site.bars[0].t * 1000).toLocaleDateString()} – ${new Date(
-          site.bars[site.bars.length - 1].t * 1000,
-        ).toLocaleDateString()}`
+        site.bars[site.bars.length - 1].t * 1000,
+      ).toLocaleDateString()}`
       : "";
 
   return (
@@ -95,7 +95,7 @@ export default async function SitePage({
           <h2 className="font-medium">Response time</h2>
           <span className="text-sm text-muted">now {fmtMs(site.responseMs)}</span>
         </div>
-        <ResponseTimeChart points={site.response} />
+        <ResponseTimeChart points={site.response} stats={site.responseStats} />
       </section>
 
       <section className="space-y-3 rounded-2xl border border-border bg-surface p-5">
@@ -126,9 +126,8 @@ function WindowTabs({ id, active }: { id: string; active: WindowKey }) {
           key={w.key}
           href={`/site/${id}?window=${w.key}`}
           scroll={false}
-          className={`rounded-md px-3 py-1 transition-colors ${
-            active === w.key ? "bg-foreground text-background" : "text-muted hover:text-foreground"
-          }`}
+          className={`rounded-md px-3 py-1 transition-colors ${active === w.key ? "bg-foreground text-background" : "text-muted hover:text-foreground"
+            }`}
         >
           {w.key}
         </Link>

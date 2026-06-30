@@ -49,6 +49,18 @@ export interface ResponsePoint {
   ms: number | null;
 }
 
+/**
+ * Summary response-time figures for a window. Computed at a fixed resolution
+ * (independent of the chart's bucket width) so they stay comparable across
+ * windows — a longer window's max is always ≥ a shorter window's. See
+ * `fetchSiteHistory`. All ms; null when there's no data.
+ */
+export interface ResponseStats {
+  min: number | null;
+  avg: number | null;
+  max: number | null;
+}
+
 /** Everything the per-site history page needs. */
 export interface SiteHistory {
   check: Check;
@@ -59,4 +71,6 @@ export interface SiteHistory {
   window: WindowKey;
   bars: UptimeBucket[];
   response: ResponsePoint[];
+  /** Window-consistent min/avg/max latency, independent of bucket width. */
+  responseStats: ResponseStats;
 }
