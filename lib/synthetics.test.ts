@@ -184,11 +184,14 @@ describe("getSiteHistory", () => {
         return Promise.resolve([sample({}, "99.9")]); // per-window uptime
       return Promise.resolve([]);
     });
-    prom.rangeQuery.mockImplementation((q: string) =>
+    // Return readings at the first three grid slots of whatever plan the code
+    // requests (start/step come from the real bucket plan), so the assertions
+    // don't depend on the wall clock.
+    prom.rangeQuery.mockImplementation((q: string, start: number, _end: number, step: number) =>
       Promise.resolve(
         q.includes("DURATION")
-          ? [{ metric: {}, values: [[100, "240"], [200, "NaN"], [300, "260"]] }]
-          : [{ metric: {}, values: [[100, "0.5"], [200, "1"], [300, "1.5"]] }],
+          ? [{ metric: {}, values: [[start + step, "240"], [start + 2 * step, "NaN"], [start + 3 * step, "260"]] }]
+          : [{ metric: {}, values: [[start + step, "0.5"], [start + 2 * step, "1"], [start + 3 * step, "1.5"]] }],
       ),
     );
 
@@ -204,18 +207,15 @@ describe("getSiteHistory", () => {
       "30d": 99.9,
       "1y": 99.9,
     });
-    // Fractions are clamped to [0, 1]; the 1.5 reading caps at 1.
-    expect(history.bars).toEqual([
-      { t: 100, uptime: 0.5 },
-      { t: 200, uptime: 1 },
-      { t: 300, uptime: 1 },
-    ]);
-    // A non-finite response reading becomes null.
-    expect(history.response).toEqual([
-      { t: 100, ms: 240 },
-      { t: 200, ms: null },
-      { t: 300, ms: 260 },
-    ]);
+    // Bars span the full 24h grid (48 buckets); the three readings fill the
+    // first slots — the 1.5 fraction is clamped to 1 — and the rest are "no data".
+    expect(history.bars).toHaveLength(48);
+    expect(history.bars.slice(0, 3).map((b) => b.uptime)).toEqual([0.5, 1, 1]);
+    expect(history.bars.slice(3).every((b) => b.uptime === null)).toBe(true);
+    // Grid timestamps ascend by the plan's step and end at the window's edge.
+    expect(history.bars[1].t - history.bars[0].t).toBe(1800);
+    // The response line is left as-is (no grid fill); a non-finite reading is null.
+    expect(history.response.map((p) => p.ms)).toEqual([240, null, 260]);
   });
 
   it("derives min/avg/max from a fixed-resolution series, independent of the window's buckets", async () => {

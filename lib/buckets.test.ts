@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bucketPlan } from "./buckets";
+import { bucketPlan, responsePlan } from "./buckets";
 import { WINDOWS, type WindowKey } from "./types";
 
 // A fixed clock on a whole second, plus a sub-second offset to exercise flooring.
@@ -55,5 +55,30 @@ describe("bucketPlan", () => {
     const after = Math.floor(Date.now() / 1000);
     expect(endSec).toBeGreaterThanOrEqual(before);
     expect(endSec).toBeLessThanOrEqual(after);
+  });
+});
+
+describe("responsePlan", () => {
+  it("matches bucketPlan when the step is already at or below a day", () => {
+    // 24h/7d/30d steps (1800s–28800s) never exceed the 1-day cap.
+    for (const key of ["24h", "7d", "30d"] as WindowKey[]) {
+      expect(responsePlan(key, now)).toEqual(bucketPlan(key, now));
+    }
+  });
+
+  it("caps the 1y step at a day, giving daily buckets across the full year", () => {
+    // 90 four-day buckets collapse the line to a few points when history is
+    // sparse; daily buckets keep recent data visible.
+    const plan = responsePlan("1y", now);
+    expect(plan.stepSec).toBe(86_400);
+    expect(plan.count).toBe(365);
+  });
+
+  it("still spans (about) the full window after capping", () => {
+    const plan = responsePlan("1y", now);
+    const year = WINDOWS.find((w) => w.key === "1y")!.seconds;
+    expect(plan.endSec - plan.startSec).toBe(plan.stepSec * plan.count);
+    // 365 whole days vs 365.0-day year — within a day.
+    expect(Math.abs(plan.stepSec * plan.count - year)).toBeLessThanOrEqual(86_400);
   });
 });
