@@ -7,6 +7,12 @@
   // `next-env.d.ts` carries Next's global type augmentations (e.g. the `next`
   // option on fetch's RequestInit, used by lib/prometheus.ts) — include it so
   // source pulled in by the tests type-checks the same way it does in the app.
-  "include": ["next-env.d.ts", "**/*.test.ts", "test", "vitest.config.mts"],
+  "include": [
+    "next-env.d.ts",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "test",
+    "vitest.config.mts"
+  ],
   "exclude": ["node_modules"]
 }

@@ -1,29 +1,49 @@
 import { fileURLToPath } from "node:url";
+import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
+// `server-only` throws if imported outside a React Server Component. Stub it so
+// server modules (prometheus.ts, synthetics.ts, and server components) can be
+// imported in unit tests.
+const serverOnly = fileURLToPath(
+  new URL("./test/stubs/server-only.ts", import.meta.url),
+);
+
 export default defineConfig({
-  // Vite resolves the `@/*` alias from tsconfig.json natively.
+  // Vite resolves the `@/*` alias from tsconfig.json natively — components
+  // import their helpers via `@/lib/...`.
   resolve: { tsconfigPaths: true },
   test: {
-    // lib/ is pure server-side logic — no DOM needed. Add `environment:
-    // "jsdom"` (plus @vitejs/plugin-react) if/when we test React components.
-    environment: "node",
-    include: ["**/*.test.ts"],
+    // Coverage is configured once at the root and shared by both projects.
     coverage: {
       provider: "v8",
-      // Report only on the lib/ logic under test (test files and the
-      // server-only stub are excluded by default / below).
-      include: ["lib/**/*.ts"],
-      exclude: ["lib/**/*.test.ts"],
+      include: ["lib/**/*.ts", "components/**/*.tsx"],
+      exclude: ["**/*.test.ts", "**/*.test.tsx"],
       reporter: ["text", "html"],
     },
-    alias: {
-      // `server-only` throws if imported outside a React Server Component.
-      // Stub it so server modules (prometheus.ts, synthetics.ts) can be
-      // unit-tested directly.
-      "server-only": fileURLToPath(
-        new URL("./test/stubs/server-only.ts", import.meta.url),
-      ),
-    },
+    projects: [
+      {
+        // Pure server-side logic — fast node environment, no DOM.
+        extends: true,
+        test: {
+          name: "lib",
+          environment: "node",
+          include: ["lib/**/*.test.ts"],
+          alias: { "server-only": serverOnly },
+        },
+      },
+      {
+        // React components — jsdom + Testing Library.
+        extends: true,
+        plugins: [react()],
+        test: {
+          name: "components",
+          environment: "jsdom",
+          include: ["components/**/*.test.tsx", "app/**/*.test.tsx"],
+          setupFiles: ["./test/setup.ts"],
+          alias: { "server-only": serverOnly },
+        },
+      },
+    ],
   },
 });
