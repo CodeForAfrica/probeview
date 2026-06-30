@@ -28,9 +28,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <header className="border-b border-border">
           <div className="mx-auto w-full max-w-3xl px-5 py-5 flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2.5">
-              <span className="grid h-8 w-8 place-items-center rounded-lg bg-foreground text-background text-sm font-bold">
-                {config.siteName.slice(0, 1)}
-              </span>
               <span className="font-semibold tracking-tight">{config.siteName}</span>
               <span className="text-muted text-sm">Status</span>
             </Link>
