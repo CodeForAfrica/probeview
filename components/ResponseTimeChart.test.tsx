@@ -1,12 +1,19 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { ResponsePoint } from "@/lib/types";
 import { ResponseTimeChart } from "./ResponseTimeChart";
 
 function pts(...ms: (number | null)[]): ResponsePoint[] {
-  // Timestamps are unused by the chart's geometry (it scales by index), but
-  // keep them distinct and ordered for realism.
+  // Hourly samples — the chart maps the X axis by timestamp.
   return ms.map((value, i) => ({ t: 1_700_000_000 + i * 3600, ms: value }));
+}
+
+/** Parse an SVG path's "M x y L x y …" commands into [x, y] coordinate pairs. */
+function coords(d: string): [number, number][] {
+  const nums = d.match(/-?\d+(\.\d+)?/g)!.map(Number);
+  const out: [number, number][] = [];
+  for (let i = 0; i + 1 < nums.length; i += 2) out.push([nums[i], nums[i + 1]]);
+  return out;
 }
 
 describe("ResponseTimeChart", () => {
@@ -41,11 +48,40 @@ describe("ResponseTimeChart", () => {
   });
 
   it("scales the highest reading to the top and the lowest to the bottom", () => {
-    // Two points span the full width; the slowest (300ms) sits near the top
-    // (small y) and the fastest (100ms) near the bottom (large y).
+    // Earliest sample sits at the left, latest at the right; the slowest (300ms)
+    // sits higher (smaller y) than the fastest (100ms).
     const { container } = render(<ResponseTimeChart points={pts(100, 300)} />);
     const line = container.querySelector('path[fill="none"]')!;
-    expect(line.getAttribute("d")).toBe("M 0.0 146.0 L 1000.0 14.0");
+    const [first, last] = coords(line.getAttribute("d")!);
+    expect(first[0]).toBeLessThan(last[0]); // time increases left → right
+    expect(last[1]).toBeLessThan(first[1]); // 300ms (last) is higher up
+  });
+
+  it("labels the time axis", () => {
+    // Hourly UTC samples around 2023-11-14; rendered as locale time-of-day.
+    const { container } = render(<ResponseTimeChart points={pts(100, 200, 300)} />);
+    const labels = [...container.querySelectorAll("text")].map((t) => t.textContent);
+    // At least one axis label should look like a clock time (e.g. "09:13").
+    expect(labels.some((l) => /\d{1,2}:\d{2}/.test(l ?? ""))).toBe(true);
+  });
+
+  it("reveals the value at a point on hover", () => {
+    const { container } = render(<ResponseTimeChart points={pts(100, 300)} />);
+    const svg = container.querySelector("svg")!;
+    // No tooltip until the pointer moves over the chart.
+    expect(screen.queryByTestId("rt-tooltip")).toBeNull();
+    // Move toward the right edge — nearest to the latest (300ms) sample.
+    fireEvent.pointerMove(svg, { clientX: 9999 });
+    expect(screen.getByTestId("rt-tooltip")).toHaveTextContent("300 ms");
+  });
+
+  it("hides the tooltip when the pointer leaves", () => {
+    const { container } = render(<ResponseTimeChart points={pts(100, 300)} />);
+    const svg = container.querySelector("svg")!;
+    fireEvent.pointerMove(svg, { clientX: 9999 });
+    expect(screen.getByTestId("rt-tooltip")).toBeInTheDocument();
+    fireEvent.pointerLeave(svg);
+    expect(screen.queryByTestId("rt-tooltip")).toBeNull();
   });
 
   it("breaks the line into separate segments across a gap", () => {
