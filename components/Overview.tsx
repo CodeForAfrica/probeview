@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { fmtMs, fmtPct, STATUS_META } from "@/lib/format";
 import { WINDOWS, type CheckStatus, type Status, type WindowKey } from "@/lib/types";
+import { Search } from "./icons";
 import { StatusBanner } from "./StatusBanner";
 
 function overallStatus(checks: CheckStatus[]): Status {
@@ -25,13 +26,20 @@ const SORTS: { key: SortKey; label: string; defaultDir: SortDir }[] = [
 export function Overview({ checks, updated }: { checks: CheckStatus[]; updated: string }) {
   const [window, setWindow] = useState<WindowKey>("30d");
   const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({ key: "name", dir: "asc" });
+  const [query, setQuery] = useState("");
 
   const overall = overallStatus(checks);
   const operational = checks.filter((c) => c.status === "up").length;
 
-  const sorted = useMemo(() => {
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const matched = q
+      ? checks.filter(
+          (c) => c.name.toLowerCase().includes(q) || c.target.toLowerCase().includes(q),
+        )
+      : checks;
     const dir = sort.dir === "asc" ? 1 : -1;
-    return [...checks].sort((a, b) => {
+    return [...matched].sort((a, b) => {
       if (sort.key === "name") return dir * a.name.localeCompare(b.name);
       const av = sort.key === "uptime" ? a.uptime[window] : a.responseMs[window];
       const bv = sort.key === "uptime" ? b.uptime[window] : b.responseMs[window];
@@ -42,7 +50,7 @@ export function Overview({ checks, updated }: { checks: CheckStatus[]; updated: 
       if (av === bv) return a.name.localeCompare(b.name);
       return dir * (av - bv);
     });
-  }, [checks, sort, window]);
+  }, [checks, query, sort, window]);
 
   function onSort(key: SortKey) {
     setSort((prev) =>
@@ -59,8 +67,23 @@ export function Overview({ checks, updated }: { checks: CheckStatus[]; updated: 
         subtitle={`${operational}/${checks.length} services operational · updated ${updated}`}
       />
 
+      {/* Search — its own row so the sort/window controls below stay uncluttered. */}
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search services by name or URL"
+          aria-label="Search services by name or URL"
+          className="w-full rounded-lg border border-border bg-surface py-2 pl-9 pr-3 text-sm placeholder:text-muted focus:border-foreground/30 focus:outline-none"
+        />
+      </div>
+
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-sm font-medium text-muted">Services</h2>
+        <h2 className="text-sm font-medium text-muted">
+          {query.trim() ? `${visible.length} of ${checks.length} services` : "Services"}
+        </h2>
         <div className="flex flex-wrap items-center gap-2">
           {/* Sort control */}
           <div className="inline-flex items-center rounded-lg border border-border bg-surface p-0.5 text-sm">
@@ -99,7 +122,12 @@ export function Overview({ checks, updated }: { checks: CheckStatus[]; updated: 
       </div>
 
       <ul className="overflow-hidden rounded-2xl border border-border bg-surface divide-y divide-border">
-        {sorted.map((c) => {
+        {visible.length === 0 && (
+          <li className="px-5 py-10 text-center text-sm text-muted">
+            No services match “{query.trim()}”.
+          </li>
+        )}
+        {visible.map((c) => {
           const meta = STATUS_META[c.status];
           return (
             <li key={c.id}>

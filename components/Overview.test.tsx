@@ -159,6 +159,54 @@ describe("Overview sorting", () => {
   });
 });
 
+describe("Overview search", () => {
+  const checks = [
+    check({ id: "pesacheck", name: "PesaCheck", target: "https://pesacheck.org" }),
+    check({ id: "the-continent", name: "The Continent", target: "https://thecontinent.org" }),
+    check({ id: "sensors", name: "sensors.AFRICA", target: "https://sensors.africa" }),
+  ];
+
+  it("filters by name as you type, case-insensitively", async () => {
+    const user = userEvent.setup();
+    render(<Overview checks={checks} updated="now" />);
+
+    await user.type(screen.getByRole("searchbox"), "pesa");
+    expect(rowIds()).toEqual(["pesacheck"]);
+  });
+
+  it("matches against the URL, not just the name", async () => {
+    const user = userEvent.setup();
+    render(<Overview checks={checks} updated="now" />);
+
+    // "continent" only appears in the target host, not the lowercased query path.
+    await user.type(screen.getByRole("searchbox"), "thecontinent");
+    expect(rowIds()).toEqual(["the-continent"]);
+  });
+
+  it("reports the match count and restores the full list when cleared", async () => {
+    const user = userEvent.setup();
+    render(<Overview checks={checks} updated="now" />);
+
+    const box = screen.getByRole("searchbox");
+    await user.type(box, "africa");
+    expect(rowIds()).toEqual(["sensors"]);
+    expect(screen.getByText("1 of 3 services")).toBeInTheDocument();
+
+    await user.clear(box);
+    expect(rowIds()).toEqual(["pesacheck", "sensors", "the-continent"]);
+    expect(screen.getByText("Services")).toBeInTheDocument();
+  });
+
+  it("shows an empty state when nothing matches", async () => {
+    const user = userEvent.setup();
+    render(<Overview checks={checks} updated="now" />);
+
+    await user.type(screen.getByRole("searchbox"), "nope");
+    expect(screen.queryAllByRole("link")).toHaveLength(0);
+    expect(screen.getByText(/No services match/)).toBeInTheDocument();
+  });
+});
+
 describe("Overview window toggle", () => {
   it("switches the displayed window and re-sorts on its values", async () => {
     const user = userEvent.setup();
