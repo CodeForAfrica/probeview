@@ -13,6 +13,8 @@
     "**/*.test.ts",
     "**/*.test.tsx",
     "test",
-    "vitest.config.mts"
+    "e2e",
+    "vitest.config.mts",
+    "playwright.config.ts"
   ]
 }
