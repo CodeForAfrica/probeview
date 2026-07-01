@@ -92,6 +92,7 @@ export function Overview({ checks, updated }: { checks: CheckStatus[]; updated: 
               return (
                 <button
                   key={s.key}
+                  type="button"
                   onClick={() => onSort(s.key)}
                   aria-label={`Sort by ${s.label}${active ? `, ${sort.dir === "asc" ? "ascending" : "descending"}` : ""}`}
                   className={`flex items-center gap-1 rounded-md px-2.5 py-1 transition-colors ${
@@ -109,6 +110,7 @@ export function Overview({ checks, updated }: { checks: CheckStatus[]; updated: 
             {WINDOWS.map((w) => (
               <button
                 key={w.key}
+                type="button"
                 onClick={() => setWindow(w.key)}
                 className={`rounded-md px-2.5 py-1 transition-colors ${
                   window === w.key ? "bg-foreground text-background" : "text-muted hover:text-foreground"

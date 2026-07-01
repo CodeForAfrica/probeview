@@ -32,7 +32,7 @@ function setTheme(next: Theme) {
   try {
     localStorage.setItem("theme", next);
   } catch {}
-  listeners.forEach((l) => l());
+  for (const l of listeners) l();
 }
 
 export function ThemeToggle() {

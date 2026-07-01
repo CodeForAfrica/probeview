@@ -29,7 +29,8 @@ export interface BucketPlan {
 
 /** Decide how many buckets / what step a window's history strip uses. */
 export function bucketPlan(window: WindowKey, now = Date.now()): BucketPlan {
-  const seconds = WINDOWS.find((w) => w.key === window)!.seconds;
+  const seconds =
+    WINDOWS.find((w) => w.key === window)?.seconds ?? WINDOWS[0].seconds;
   const count = BAR_COUNT[window];
   const stepSec = Math.max(MIN_STEP_SECONDS, Math.round(seconds / count));
   const endSec = Math.floor(now / 1000);

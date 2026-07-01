@@ -14,12 +14,11 @@ export default async function Page() {
     return <ErrorPanel message={e instanceof Error ? e.message : String(e)} />;
   }
 
-  const updated =
-    new Date().toLocaleTimeString("en-GB", {
-      hour: "2-digit",
-      minute: "2-digit",
-      timeZone: "UTC",
-    }) + " UTC";
+  const updated = `${new Date().toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "UTC",
+  })} UTC`;
 
   return (
     <>

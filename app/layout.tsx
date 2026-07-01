@@ -24,6 +24,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: static, non-user-controlled boot script that must run before paint to prevent a theme flash */}
         <script dangerouslySetInnerHTML={{ __html: themeBoot }} />
         <header className="border-b border-border">
           <div className="mx-auto w-full max-w-3xl px-5 py-5 flex items-center justify-between">

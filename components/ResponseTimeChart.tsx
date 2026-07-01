@@ -164,8 +164,8 @@ export function ResponseTimeChart({
         </defs>
 
         {/* Y gridlines + ms labels */}
-        {yTicks.map((tick, i) => (
-          <g key={i}>
+        {yTicks.map((tick) => (
+          <g key={tick.ms}>
             <line
               x1={PAD.left}
               x2={width - PAD.right}
@@ -187,9 +187,9 @@ export function ResponseTimeChart({
         ))}
 
         {/* X time labels */}
-        {xTicks.map((tick, i) => (
+        {xTicks.map((tick) => (
           <text
-            key={i}
+            key={tick.t}
             x={tick.x}
             y={HEIGHT - 8}
             textAnchor={tick.anchor}
