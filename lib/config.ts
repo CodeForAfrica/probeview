@@ -65,6 +65,11 @@ export const config = {
 
   siteName: env("NEXT_PUBLIC_SITE_NAME", "Code for Africa"),
   tagline: env("NEXT_PUBLIC_SITE_TAGLINE", "Status of our public services"),
+
+  appName: "ProbeView",
+  repoUrl: "https://github.com/codeforafrica/probeview",
+  builtByName: "Code for Africa",
+  builtByUrl: "https://codeforafrica.org",
 } as const;
 
 export type Config = typeof config;

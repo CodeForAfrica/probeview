@@ -8,6 +8,11 @@ import "./globals.css";
 // Runs before paint to set the theme, avoiding a light/dark flash on load.
 const themeBoot = `(function(){try{var t=localStorage.getItem('theme');if(t!=='light'&&t!=='dark'){t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.dataset.theme=t;}catch(e){}})();`;
 
+// Footer links: brighter than the surrounding muted text, underlined, with a
+// hover state — so they read as links rather than plain text.
+const footerLink =
+  "text-foreground underline underline-offset-2 decoration-border hover:decoration-foreground transition-colors";
+
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
@@ -48,20 +53,31 @@ export default function RootLayout({
         </main>
 
         <footer className="border-t border-border">
-          <div className="mx-auto w-full max-w-3xl px-5 py-6 text-sm text-muted flex flex-wrap items-center justify-between gap-2">
-            <span>
-              {config.siteName} · {config.tagline}
-            </span>
-            <span>
-              Powered by{" "}
-              <a
-                href="https://grafana.com/products/cloud/synthetic-monitoring/"
-                target="_blank"
-                rel="noopener"
-              >
-                Grafana Synthetics
-              </a>
-            </span>
+          <div className="mx-auto w-full max-w-3xl px-5 py-6 text-sm text-muted flex flex-col gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+              <span>
+                {config.siteName} · {config.tagline}
+              </span>
+              <span>
+                <a
+                  className={footerLink}
+                  href={config.repoUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {config.appName}
+                </a>
+                {" · Built by "}
+                <a
+                  className={footerLink}
+                  href={config.builtByUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {config.builtByName}
+                </a>
+              </span>
+            </div>
           </div>
         </footer>
       </body>
