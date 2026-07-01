@@ -6,7 +6,9 @@ test.describe("site detail page", () => {
   test("renders an operational service's details", async ({ page }) => {
     await page.goto("/site/pesacheck");
 
-    await expect(page.getByRole("heading", { name: "PesaCheck" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "PesaCheck" }),
+    ).toBeVisible();
     await expect(page.getByText("Operational")).toBeVisible();
 
     // External link to the probed target, protocol stripped in the label.
@@ -28,13 +30,14 @@ test.describe("site detail page", () => {
     await expect(
       page.getByRole("img", { name: "Response time over time" }),
     ).toBeVisible();
-    await expect(page.getByRole("img", { name: "Uptime history" })).toBeVisible();
+    await expect(
+      page.getByRole("img", { name: "Uptime history" }),
+    ).toBeVisible();
 
     // Back to the overview.
-    await expect(page.getByRole("link", { name: "All services" })).toHaveAttribute(
-      "href",
-      "/",
-    );
+    await expect(
+      page.getByRole("link", { name: "All services" }),
+    ).toHaveAttribute("href", "/");
   });
 
   test("marks a down service as down with no current response time", async ({
@@ -53,7 +56,9 @@ test.describe("site detail page", () => {
     await page.goto("/site/pesacheck");
     await page.getByRole("link", { name: "30d", exact: true }).click();
     await expect(page).toHaveURL("/site/pesacheck?window=30d");
-    await expect(page.getByRole("heading", { name: "PesaCheck" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "PesaCheck" }),
+    ).toBeVisible();
   });
 
   test("shows an error for an unknown service", async ({ page }) => {
@@ -62,6 +67,8 @@ test.describe("site detail page", () => {
       page.getByText('No monitored service found for "does-not-exist".'),
     ).toBeVisible();
     // The back link is still available to escape the error.
-    await expect(page.getByRole("link", { name: "All services" })).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "All services" }),
+    ).toBeVisible();
   });
 });

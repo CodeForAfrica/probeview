@@ -1,6 +1,6 @@
-import type { ResponsePoint } from "@/lib/types";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import type { ResponsePoint } from "@/lib/types";
 import { ResponseTimeChart } from "./ResponseTimeChart";
 
 function pts(...ms: (number | null)[]): ResponsePoint[] {
@@ -43,7 +43,9 @@ describe("ResponseTimeChart", () => {
 
   it("draws both an area fill and a line", () => {
     const { container } = render(<ResponseTimeChart points={pts(100, 300)} />);
-    expect(container.querySelector('path[fill="url(#rt-fill)"]')).not.toBeNull();
+    expect(
+      container.querySelector('path[fill="url(#rt-fill)"]'),
+    ).not.toBeNull();
     expect(container.querySelector('path[fill="none"]')).not.toBeNull();
   });
 
@@ -59,8 +61,12 @@ describe("ResponseTimeChart", () => {
 
   it("labels the time axis", () => {
     // Hourly UTC samples around 2023-11-14; rendered as locale time-of-day.
-    const { container } = render(<ResponseTimeChart points={pts(100, 200, 300)} />);
-    const labels = [...container.querySelectorAll("text")].map((t) => t.textContent);
+    const { container } = render(
+      <ResponseTimeChart points={pts(100, 200, 300)} />,
+    );
+    const labels = [...container.querySelectorAll("text")].map(
+      (t) => t.textContent,
+    );
     // At least one axis label should look like a clock time (e.g. "09:13").
     expect(labels.some((l) => /\d{1,2}:\d{2}/.test(l ?? ""))).toBe(true);
   });
@@ -106,7 +112,10 @@ describe("ResponseTimeChart", () => {
     // stats know the real peak was 7.56s. The footer must trust the stats so
     // the figure stays comparable across windows.
     render(
-      <ResponseTimeChart points={pts(100, 300)} stats={{ min: 90, avg: 410, max: 7560 }} />,
+      <ResponseTimeChart
+        points={pts(100, 300)}
+        stats={{ min: 90, avg: 410, max: 7560 }}
+      />,
     );
     expect(screen.getByText("min 90 ms")).toBeInTheDocument();
     expect(screen.getByText("avg 410 ms")).toBeInTheDocument();

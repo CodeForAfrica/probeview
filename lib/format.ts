@@ -31,7 +31,8 @@ export function deriveStatus(
 ): Status {
   if (currentlyUp == null) return "unknown";
   if (!currentlyUp) return "down";
-  if (uptime24h != null && uptime24h < config.thresholds.degraded) return "degraded";
+  if (uptime24h != null && uptime24h < config.thresholds.degraded)
+    return "degraded";
   return "up";
 }
 
@@ -39,7 +40,11 @@ export const STATUS_META: Record<
   Status,
   { label: string; color: string; dot: string }
 > = {
-  up: { label: "Operational", color: "text-emerald-600", dot: "bg-emerald-500" },
+  up: {
+    label: "Operational",
+    color: "text-emerald-600",
+    dot: "bg-emerald-500",
+  },
   degraded: { label: "Degraded", color: "text-amber-600", dot: "bg-amber-500" },
   down: { label: "Down", color: "text-rose-600", dot: "bg-rose-500" },
   unknown: { label: "No data", color: "text-zinc-400", dot: "bg-zinc-400" },

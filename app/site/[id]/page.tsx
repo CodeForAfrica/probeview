@@ -1,19 +1,26 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { ArrowLeft, ExternalLink } from "@/components/icons";
 import { ErrorPanel } from "@/components/Notice";
 import { ResponseTimeChart } from "@/components/ResponseTimeChart";
 import { StatusBadge } from "@/components/StatusBadge";
 import { UptimeBars } from "@/components/UptimeBars";
-import { ArrowLeft, ExternalLink } from "@/components/icons";
 import { config } from "@/lib/config";
 import { fmtMs, fmtPct } from "@/lib/format";
 import { getSiteHistory } from "@/lib/synthetics";
-import { WINDOWS, WINDOW_KEYS, type SiteHistory, type WindowKey } from "@/lib/types";
-import type { Metadata } from "next";
-import Link from "next/link";
+import {
+  type SiteHistory,
+  WINDOW_KEYS,
+  WINDOWS,
+  type WindowKey,
+} from "@/lib/types";
 
 export const revalidate = 60;
 
 function parseWindow(value: string | undefined): WindowKey {
-  return (WINDOW_KEYS as string[]).includes(value ?? "") ? (value as WindowKey) : "7d";
+  return (WINDOW_KEYS as string[]).includes(value ?? "")
+    ? (value as WindowKey)
+    : "7d";
 }
 
 export async function generateMetadata({
@@ -54,8 +61,8 @@ export default async function SitePage({
   const rangeLabel =
     site.bars.length > 0
       ? `${new Date(site.bars[0].t * 1000).toLocaleDateString()} – ${new Date(
-        site.bars[site.bars.length - 1].t * 1000,
-      ).toLocaleDateString()}`
+          site.bars[site.bars.length - 1].t * 1000,
+        ).toLocaleDateString()}`
       : "";
 
   return (
@@ -64,7 +71,9 @@ export default async function SitePage({
 
       <header className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight">{site.check.name}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {site.check.name}
+          </h1>
           <StatusBadge status={site.status} />
         </div>
         <a
@@ -82,7 +91,9 @@ export default async function SitePage({
       <section className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-4">
         {WINDOWS.map((w) => (
           <div key={w.key} className="bg-surface px-4 py-4">
-            <div className="text-lg font-semibold tabular-nums">{fmtPct(site.uptime[w.key])}</div>
+            <div className="text-lg font-semibold tabular-nums">
+              {fmtPct(site.uptime[w.key])}
+            </div>
             <div className="text-xs text-muted">{w.label} uptime</div>
           </div>
         ))}
@@ -93,7 +104,9 @@ export default async function SitePage({
       <section className="space-y-3 rounded-2xl border border-border bg-surface p-5">
         <div className="flex items-baseline justify-between">
           <h2 className="font-medium">Response time</h2>
-          <span className="text-sm text-muted">now {fmtMs(site.responseMs)}</span>
+          <span className="text-sm text-muted">
+            now {fmtMs(site.responseMs)}
+          </span>
         </div>
         <ResponseTimeChart points={site.response} stats={site.responseStats} />
       </section>
@@ -111,7 +124,10 @@ export default async function SitePage({
 
 function BackLink() {
   return (
-    <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-foreground">
+    <Link
+      href="/"
+      className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-foreground"
+    >
       <ArrowLeft className="h-4 w-4" />
       All services
     </Link>
@@ -126,8 +142,11 @@ function WindowTabs({ id, active }: { id: string; active: WindowKey }) {
           key={w.key}
           href={`/site/${id}?window=${w.key}`}
           scroll={false}
-          className={`rounded-md px-3 py-1 transition-colors ${active === w.key ? "bg-foreground text-background" : "text-muted hover:text-foreground"
-            }`}
+          className={`rounded-md px-3 py-1 transition-colors ${
+            active === w.key
+              ? "bg-foreground text-background"
+              : "text-muted hover:text-foreground"
+          }`}
         >
           {w.key}
         </Link>

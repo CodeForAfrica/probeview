@@ -1,5 +1,5 @@
-import { Overview } from "@/components/Overview";
 import { ErrorPanel, MockNotice } from "@/components/Notice";
+import { Overview } from "@/components/Overview";
 import { config } from "@/lib/config";
 import { getOverview } from "@/lib/synthetics";
 import type { CheckStatus } from "@/lib/types";

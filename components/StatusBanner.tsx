@@ -8,11 +8,19 @@ const BANNER: Record<Status, { title: string; bg: string }> = {
   unknown: { title: "Status unavailable", bg: "bg-zinc-500" },
 };
 
-export function StatusBanner({ status, subtitle }: { status: Status; subtitle?: string }) {
+export function StatusBanner({
+  status,
+  subtitle,
+}: {
+  status: Status;
+  subtitle?: string;
+}) {
   const b = BANNER[status];
   const Icon = status === "up" ? CheckCircle : AlertTriangle;
   return (
-    <div className={`flex items-center gap-4 rounded-2xl px-6 py-6 text-white shadow-sm ${b.bg}`}>
+    <div
+      className={`flex items-center gap-4 rounded-2xl px-6 py-6 text-white shadow-sm ${b.bg}`}
+    >
       <Icon className="h-9 w-9 shrink-0" />
       <div>
         <h1 className="text-xl font-semibold leading-tight">{b.title}</h1>

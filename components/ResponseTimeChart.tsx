@@ -1,8 +1,8 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { fmtMs } from "@/lib/format";
 import type { ResponsePoint, ResponseStats } from "@/lib/types";
-import { useEffect, useRef, useState } from "react";
 
 const HEIGHT = 200; // total SVG height, in px
 const PAD = { top: 12, right: 12, bottom: 26, left: 48 };
@@ -18,7 +18,10 @@ type ValidPoint = { t: number; ms: number };
 function fmtAxisTime(t: number, spanSec: number): string {
   const d = new Date(t * 1000);
   if (spanSec <= 48 * 3600) {
-    return d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+    return d.toLocaleTimeString(undefined, {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   }
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
@@ -96,14 +99,24 @@ export function ResponseTimeChart({
   if (current.length) segments.push(current);
 
   const toPath = (seg: ValidPoint[]) =>
-    seg.map((pt, k) => `${k === 0 ? "M" : "L"} ${x(pt.t).toFixed(1)} ${y(pt.ms).toFixed(1)}`).join(" ");
+    seg
+      .map(
+        (pt, k) =>
+          `${k === 0 ? "M" : "L"} ${x(pt.t).toFixed(1)} ${y(pt.ms).toFixed(1)}`,
+      )
+      .join(" ");
   const line = segments.map(toPath).join(" ");
 
   // Area fill under the longest segment (keeps the gradient clean across gaps).
-  const main = segments.reduce((a, b) => (b.length > a.length ? b : a), segments[0]);
+  const main = segments.reduce(
+    (a, b) => (b.length > a.length ? b : a),
+    segments[0],
+  );
   const area =
     `M ${x(main[0].t).toFixed(1)} ${baseline} ` +
-    main.map((pt) => `L ${x(pt.t).toFixed(1)} ${y(pt.ms).toFixed(1)}`).join(" ") +
+    main
+      .map((pt) => `L ${x(pt.t).toFixed(1)} ${y(pt.ms).toFixed(1)}`)
+      .join(" ") +
     ` L ${x(main[main.length - 1].t).toFixed(1)} ${baseline} Z`;
 
   // Horizontal gridlines + ms labels down the Y axis.
@@ -222,7 +235,14 @@ export function ResponseTimeChart({
               strokeDasharray="3 3"
               opacity="0.6"
             />
-            <circle cx={x(active.t)} cy={y(active.ms)} r="4" fill={ACCENT} stroke="var(--surface)" strokeWidth="2" />
+            <circle
+              cx={x(active.t)}
+              cy={y(active.ms)}
+              r="4"
+              fill={ACCENT}
+              stroke="var(--surface)"
+              strokeWidth="2"
+            />
           </g>
         )}
       </svg>
@@ -233,7 +253,9 @@ export function ResponseTimeChart({
           className="pointer-events-none absolute z-10 -translate-x-1/2 rounded-md border border-border bg-surface px-2.5 py-1.5 text-center shadow-sm"
           style={{ left: tipLeft, top: PAD.top }}
         >
-          <div className="text-sm font-semibold tabular-nums">{fmtMs(active.ms)}</div>
+          <div className="text-sm font-semibold tabular-nums">
+            {fmtMs(active.ms)}
+          </div>
           <div className="text-[11px] text-muted">{fmtStamp(active.t)}</div>
         </div>
       )}

@@ -45,7 +45,9 @@ describe("bucketPlan", () => {
     // so this asserts the invariant rather than exercising the Math.max floor
     // branch — that branch is effectively dead for the current WINDOWS.
     for (const { key } of WINDOWS) {
-      expect(bucketPlan(key as WindowKey, now).stepSec).toBeGreaterThanOrEqual(300);
+      expect(bucketPlan(key as WindowKey, now).stepSec).toBeGreaterThanOrEqual(
+        300,
+      );
     }
   });
 
@@ -79,6 +81,8 @@ describe("responsePlan", () => {
     const year = WINDOWS.find((w) => w.key === "1y")!.seconds;
     expect(plan.endSec - plan.startSec).toBe(plan.stepSec * plan.count);
     // 365 whole days vs 365.0-day year — within a day.
-    expect(Math.abs(plan.stepSec * plan.count - year)).toBeLessThanOrEqual(86_400);
+    expect(Math.abs(plan.stepSec * plan.count - year)).toBeLessThanOrEqual(
+      86_400,
+    );
   });
 });

@@ -109,9 +109,24 @@ describe("Overview rows", () => {
 describe("Overview sorting", () => {
   // Distinct uptime/response per service so order is unambiguous (30d window).
   const checks = [
-    check({ id: "alpha", name: "Alpha", uptime: byWindow(99.95), responseMs: byWindow(100) }),
-    check({ id: "bravo", name: "Bravo", uptime: byWindow(99.0), responseMs: byWindow(300) }),
-    check({ id: "charlie", name: "Charlie", uptime: byWindow(99.99), responseMs: byWindow(50) }),
+    check({
+      id: "alpha",
+      name: "Alpha",
+      uptime: byWindow(99.95),
+      responseMs: byWindow(100),
+    }),
+    check({
+      id: "bravo",
+      name: "Bravo",
+      uptime: byWindow(99.0),
+      responseMs: byWindow(300),
+    }),
+    check({
+      id: "charlie",
+      name: "Charlie",
+      uptime: byWindow(99.99),
+      responseMs: byWindow(50),
+    }),
   ];
 
   it("defaults to sorting by name, ascending", () => {
@@ -161,9 +176,21 @@ describe("Overview sorting", () => {
 
 describe("Overview search", () => {
   const checks = [
-    check({ id: "pesacheck", name: "PesaCheck", target: "https://pesacheck.org" }),
-    check({ id: "the-continent", name: "The Continent", target: "https://thecontinent.org" }),
-    check({ id: "sensors", name: "sensors.AFRICA", target: "https://sensors.africa" }),
+    check({
+      id: "pesacheck",
+      name: "PesaCheck",
+      target: "https://pesacheck.org",
+    }),
+    check({
+      id: "the-continent",
+      name: "The Continent",
+      target: "https://thecontinent.org",
+    }),
+    check({
+      id: "sensors",
+      name: "sensors.AFRICA",
+      target: "https://sensors.africa",
+    }),
   ];
 
   it("filters by name as you type, case-insensitively", async () => {

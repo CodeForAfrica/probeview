@@ -6,13 +6,13 @@
 import { bucketPlan } from "./buckets";
 import { deriveStatus } from "./format";
 import {
-  WINDOW_KEYS,
   type CheckStatus,
   type MetricByWindow,
   type ResponsePoint,
   type SiteHistory,
   type UptimeBucket,
   type UptimeByWindow,
+  WINDOW_KEYS,
   type WindowKey,
 } from "./types";
 
@@ -29,12 +29,60 @@ interface MockSite {
 }
 
 const MOCK_SITES: MockSite[] = [
-  { id: "pesacheck", name: "PesaCheck", target: "https://pesacheck.org", region: "Frankfurt", baseUptime: 99.98, baseMs: 240, currentlyUp: true },
-  { id: "code-for-africa", name: "Code for Africa", target: "https://codeforafrica.org", region: "Frankfurt", baseUptime: 99.95, baseMs: 310, currentlyUp: true },
-  { id: "sensors-africa", name: "sensors.AFRICA", target: "https://sensors.africa", region: "London", baseUptime: 99.7, baseMs: 420, currentlyUp: true },
-  { id: "academy-africa", name: "Academy", target: "https://academy.africa", region: "Frankfurt", baseUptime: 98.6, baseMs: 530, currentlyUp: true },
-  { id: "african-drone", name: "africanDRONE", target: "https://africandrone.org", region: "London", baseUptime: 93.2, baseMs: 870, currentlyUp: false },
-  { id: "the-continent", name: "The Continent", target: "https://thecontinent.org", region: "New York", baseUptime: 99.99, baseMs: 180, currentlyUp: true },
+  {
+    id: "pesacheck",
+    name: "PesaCheck",
+    target: "https://pesacheck.org",
+    region: "Frankfurt",
+    baseUptime: 99.98,
+    baseMs: 240,
+    currentlyUp: true,
+  },
+  {
+    id: "code-for-africa",
+    name: "Code for Africa",
+    target: "https://codeforafrica.org",
+    region: "Frankfurt",
+    baseUptime: 99.95,
+    baseMs: 310,
+    currentlyUp: true,
+  },
+  {
+    id: "sensors-africa",
+    name: "sensors.AFRICA",
+    target: "https://sensors.africa",
+    region: "London",
+    baseUptime: 99.7,
+    baseMs: 420,
+    currentlyUp: true,
+  },
+  {
+    id: "academy-africa",
+    name: "Academy",
+    target: "https://academy.africa",
+    region: "Frankfurt",
+    baseUptime: 98.6,
+    baseMs: 530,
+    currentlyUp: true,
+  },
+  {
+    id: "african-drone",
+    name: "africanDRONE",
+    target: "https://africandrone.org",
+    region: "London",
+    baseUptime: 93.2,
+    baseMs: 870,
+    currentlyUp: false,
+  },
+  {
+    id: "the-continent",
+    name: "The Continent",
+    target: "https://thecontinent.org",
+    region: "New York",
+    baseUptime: 99.99,
+    baseMs: 180,
+    currentlyUp: true,
+  },
 ];
 
 /** Small deterministic PRNG so fixtures are stable across renders. */
@@ -103,7 +151,10 @@ export function mockOverview(): CheckStatus[] {
   });
 }
 
-export function mockSiteHistory(id: string, window: WindowKey): SiteHistory | null {
+export function mockSiteHistory(
+  id: string,
+  window: WindowKey,
+): SiteHistory | null {
   const site = MOCK_SITES.find((s) => s.id === id);
   if (!site) return null;
 
@@ -124,18 +175,22 @@ export function mockSiteHistory(id: string, window: WindowKey): SiteHistory | nu
     if (!site.currentlyUp && isRecent) frac = r() < 0.6 ? 0 : 0.3; // current incident
     bars.push({ t, uptime: Number(frac.toFixed(3)) });
 
-    const wobble = Math.sin(i / 4) * site.baseMs * 0.18 + (r() - 0.5) * site.baseMs * 0.25;
-    const ms = frac === 0 ? null : Math.max(40, Math.round(site.baseMs + wobble));
+    const wobble =
+      Math.sin(i / 4) * site.baseMs * 0.18 + (r() - 0.5) * site.baseMs * 0.25;
+    const ms =
+      frac === 0 ? null : Math.max(40, Math.round(site.baseMs + wobble));
     response.push({ t, ms });
   }
 
-  const samples = response.map((p) => p.ms).filter((ms): ms is number => ms != null);
+  const samples = response
+    .map((p) => p.ms)
+    .filter((ms): ms is number => ms != null);
   const responseStats = samples.length
     ? {
-      min: Math.min(...samples),
-      avg: Math.round(samples.reduce((s, ms) => s + ms, 0) / samples.length),
-      max: Math.max(...samples),
-    }
+        min: Math.min(...samples),
+        avg: Math.round(samples.reduce((s, ms) => s + ms, 0) / samples.length),
+        max: Math.max(...samples),
+      }
     : { min: null, avg: null, max: null };
 
   return {

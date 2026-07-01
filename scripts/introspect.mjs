@@ -23,12 +23,15 @@ if (!url || !user || !token) {
   process.exit(1);
 }
 
-const auth = "Basic " + Buffer.from(`${user}:${token}`).toString("base64");
+const auth = `Basic ${Buffer.from(`${user}:${token}`).toString("base64")}`;
 
 async function query(q) {
   const res = await fetch(`${url}/api/v1/query`, {
     method: "POST",
-    headers: { Authorization: auth, "Content-Type": "application/x-www-form-urlencoded" },
+    headers: {
+      Authorization: auth,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
     body: new URLSearchParams({ query: q }).toString(),
   });
   const text = await res.text();
@@ -77,16 +80,22 @@ console.log("\nChecks (from sm_check_info)");
 console.log("---------------------------");
 try {
   const checks = await query("sm_check_info");
-  if (!checks.length) console.log("  none found — is the metric name different on your stack?");
+  if (!checks.length)
+    console.log("  none found — is the metric name different on your stack?");
   const seen = new Set();
   for (const c of checks) {
     const m = c.metric;
     const k = `${m.job} | ${m.instance}`;
     if (seen.has(k)) continue;
     seen.add(k);
-    console.log(`  • job=${m.job}  instance=${m.instance}  region=${m.region ?? "-"}`);
+    console.log(
+      `  • job=${m.job}  instance=${m.instance}  region=${m.region ?? "-"}`,
+    );
   }
-  console.log("\n  Available labels:", [...new Set(checks.flatMap((c) => Object.keys(c.metric)))].join(", "));
+  console.log(
+    "\n  Available labels:",
+    [...new Set(checks.flatMap((c) => Object.keys(c.metric)))].join(", "),
+  );
 } catch (e) {
   console.log("  error:", e.message);
 }
@@ -95,7 +104,10 @@ try {
 console.log("\nApp queries (do they return rows?)");
 console.log("----------------------------------");
 const PROBES = [
-  ["status: max by (job,instance)(probe_success)", "max by (job, instance) (probe_success)"],
+  [
+    "status: max by (job,instance)(probe_success)",
+    "max by (job, instance) (probe_success)",
+  ],
   [
     "uptime 24h: rate(probe_all_success_sum)/rate(probe_all_success_count)",
     "100 * sum by (job, instance) (rate(probe_all_success_sum[24h])) / sum by (job, instance) (rate(probe_all_success_count[24h]))",
@@ -109,7 +121,10 @@ for (const [label, q] of PROBES) {
   try {
     const r = await query(q);
     console.log(`  ${r.length ? "✓" : "✗ EMPTY"} ${label}  (${r.length} rows)`);
-    if (r.length) console.log(`      e.g. ${JSON.stringify(labelsOf(r[0]))} = ${r[0].value[1]}`);
+    if (r.length)
+      console.log(
+        `      e.g. ${JSON.stringify(labelsOf(r[0]))} = ${r[0].value[1]}`,
+      );
   } catch (e) {
     console.log(`  ✗ ${label}  (${e.message})`);
   }

@@ -49,5 +49,11 @@ export function responsePlan(window: WindowKey, now = Date.now()): BucketPlan {
   if (base.stepSec <= MAX_RESPONSE_STEP_SECONDS) return base;
   const stepSec = MAX_RESPONSE_STEP_SECONDS;
   const count = Math.round((base.stepSec * base.count) / stepSec);
-  return { window, count, stepSec, endSec: base.endSec, startSec: base.endSec - stepSec * count };
+  return {
+    window,
+    count,
+    stepSec,
+    endSec: base.endSec,
+    startSec: base.endSec - stepSec * count,
+  };
 }

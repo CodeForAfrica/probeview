@@ -40,7 +40,8 @@ export function UptimeBars({ bars }: { bars: UptimeBucket[] }) {
           fill={barColor(b.uptime)}
         >
           <title>
-            {label(b.t)} — {b.uptime == null ? "no data" : fmtPct(b.uptime * 100)}
+            {label(b.t)} —{" "}
+            {b.uptime == null ? "no data" : fmtPct(b.uptime * 100)}
           </title>
         </rect>
       ))}

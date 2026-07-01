@@ -11,7 +11,7 @@ export interface RangeSeries {
   values: [number, string][];
 }
 
-class PrometheusError extends Error { }
+class PrometheusError extends Error {}
 
 async function call(
   path: "/api/v1/query" | "/api/v1/query_range" | "/api/v1/series",
@@ -20,12 +20,14 @@ async function call(
   if (!config.promUrl || !config.promUser || !config.promToken) {
     throw new PrometheusError(
       "Grafana Cloud Prometheus is not configured. Set GRAFANA_PROM_URL, " +
-      "GRAFANA_PROM_USER and GRAFANA_PROM_TOKEN in .env.local (or run with MOCK=1).",
+        "GRAFANA_PROM_USER and GRAFANA_PROM_TOKEN in .env.local (or run with MOCK=1).",
     );
   }
 
   const url = `${config.promUrl.replace(/\/$/, "")}${path}`;
-  const auth = Buffer.from(`${config.promUser}:${config.promToken}`).toString("base64");
+  const auth = Buffer.from(`${config.promUser}:${config.promToken}`).toString(
+    "base64",
+  );
 
   const res = await fetch(url, {
     method: "POST",
@@ -39,12 +41,20 @@ async function call(
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new PrometheusError(`Prometheus HTTP ${res.status}: ${text.slice(0, 300)}`);
+    throw new PrometheusError(
+      `Prometheus HTTP ${res.status}: ${text.slice(0, 300)}`,
+    );
   }
 
-  const json = (await res.json()) as { status: string; data?: unknown; error?: string };
+  const json = (await res.json()) as {
+    status: string;
+    data?: unknown;
+    error?: string;
+  };
   if (json.status !== "success") {
-    throw new PrometheusError(`Prometheus query failed: ${json.error ?? "unknown error"}`);
+    throw new PrometheusError(
+      `Prometheus query failed: ${json.error ?? "unknown error"}`,
+    );
   }
   return json.data;
 }

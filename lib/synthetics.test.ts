@@ -176,23 +176,39 @@ describe("getSiteHistory", () => {
             "1",
           ),
         ]);
-      if (q.includes("[1h]"))
-        return Promise.resolve([sample({}, "100")]); // current → up
-      if (q.includes("DURATION"))
-        return Promise.resolve([sample({}, "240")]); // respNow
-      if (q.includes("SUCCESS"))
-        return Promise.resolve([sample({}, "99.9")]); // per-window uptime
+      if (q.includes("[1h]")) return Promise.resolve([sample({}, "100")]); // current → up
+      if (q.includes("DURATION")) return Promise.resolve([sample({}, "240")]); // respNow
+      if (q.includes("SUCCESS")) return Promise.resolve([sample({}, "99.9")]); // per-window uptime
       return Promise.resolve([]);
     });
     // Return readings at the first three grid slots of whatever plan the code
     // requests (start/step come from the real bucket plan), so the assertions
     // don't depend on the wall clock.
-    prom.rangeQuery.mockImplementation((q: string, start: number, _end: number, step: number) =>
-      Promise.resolve(
-        q.includes("DURATION")
-          ? [{ metric: {}, values: [[start + step, "240"], [start + 2 * step, "NaN"], [start + 3 * step, "260"]] }]
-          : [{ metric: {}, values: [[start + step, "0.5"], [start + 2 * step, "1"], [start + 3 * step, "1.5"]] }],
-      ),
+    prom.rangeQuery.mockImplementation(
+      (q: string, start: number, _end: number, step: number) =>
+        Promise.resolve(
+          q.includes("DURATION")
+            ? [
+                {
+                  metric: {},
+                  values: [
+                    [start + step, "240"],
+                    [start + 2 * step, "NaN"],
+                    [start + 3 * step, "260"],
+                  ],
+                },
+              ]
+            : [
+                {
+                  metric: {},
+                  values: [
+                    [start + step, "0.5"],
+                    [start + 2 * step, "1"],
+                    [start + 3 * step, "1.5"],
+                  ],
+                },
+              ],
+        ),
     );
 
     const history = (await getSiteHistory("site-a", "24h"))!;
@@ -221,11 +237,16 @@ describe("getSiteHistory", () => {
   it("derives min/avg/max from a fixed-resolution series, independent of the window's buckets", async () => {
     prom.instantQuery.mockImplementation((q: string) => {
       if (q === "sm_info")
-        return Promise.resolve([sample({ job: "Site A", instance: "https://a.org" }, "1")]);
+        return Promise.resolve([
+          sample({ job: "Site A", instance: "https://a.org" }, "1"),
+        ]);
       // The summary stats query a fixed-resolution sub-series, matched first.
-      if (q.startsWith("min_over_time")) return Promise.resolve([sample({}, "180")]);
-      if (q.startsWith("avg_over_time")) return Promise.resolve([sample({}, "520")]);
-      if (q.startsWith("max_over_time")) return Promise.resolve([sample({}, "7560")]);
+      if (q.startsWith("min_over_time"))
+        return Promise.resolve([sample({}, "180")]);
+      if (q.startsWith("avg_over_time"))
+        return Promise.resolve([sample({}, "520")]);
+      if (q.startsWith("max_over_time"))
+        return Promise.resolve([sample({}, "7560")]);
       if (q.includes("[1h]")) return Promise.resolve([sample({}, "100")]); // current → up
       if (q.includes("DURATION")) return Promise.resolve([sample({}, "240")]);
       if (q.includes("SUCCESS")) return Promise.resolve([sample({}, "99.9")]);
@@ -242,6 +263,10 @@ describe("getSiteHistory", () => {
     // The extremes use a constant 1h resolution over the window (here [7d:1h]),
     // not the chart's per-window bucket — that's what keeps 30d ≥ 7d.
     const queries = prom.instantQuery.mock.calls.map((c) => c[0] as string);
-    expect(queries.some((q) => q.startsWith("max_over_time") && q.includes("[7d:1h]"))).toBe(true);
+    expect(
+      queries.some(
+        (q) => q.startsWith("max_over_time") && q.includes("[7d:1h]"),
+      ),
+    ).toBe(true);
   });
 });

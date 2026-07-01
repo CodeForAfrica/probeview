@@ -3,14 +3,20 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { fmtMs, fmtPct, STATUS_META } from "@/lib/format";
-import { WINDOWS, type CheckStatus, type Status, type WindowKey } from "@/lib/types";
+import {
+  type CheckStatus,
+  type Status,
+  WINDOWS,
+  type WindowKey,
+} from "@/lib/types";
 import { Search } from "./icons";
 import { StatusBanner } from "./StatusBanner";
 
 function overallStatus(checks: CheckStatus[]): Status {
   if (checks.some((c) => c.status === "down")) return "down";
   if (checks.some((c) => c.status === "degraded")) return "degraded";
-  if (checks.length && checks.every((c) => c.status === "unknown")) return "unknown";
+  if (checks.length && checks.every((c) => c.status === "unknown"))
+    return "unknown";
   return "up";
 }
 
@@ -23,9 +29,18 @@ const SORTS: { key: SortKey; label: string; defaultDir: SortDir }[] = [
   { key: "response", label: "Response", defaultDir: "desc" }, // slowest first
 ];
 
-export function Overview({ checks, updated }: { checks: CheckStatus[]; updated: string }) {
+export function Overview({
+  checks,
+  updated,
+}: {
+  checks: CheckStatus[];
+  updated: string;
+}) {
   const [window, setWindow] = useState<WindowKey>("30d");
-  const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({ key: "name", dir: "asc" });
+  const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({
+    key: "name",
+    dir: "asc",
+  });
   const [query, setQuery] = useState("");
 
   const overall = overallStatus(checks);
@@ -35,14 +50,18 @@ export function Overview({ checks, updated }: { checks: CheckStatus[]; updated: 
     const q = query.trim().toLowerCase();
     const matched = q
       ? checks.filter(
-          (c) => c.name.toLowerCase().includes(q) || c.target.toLowerCase().includes(q),
+          (c) =>
+            c.name.toLowerCase().includes(q) ||
+            c.target.toLowerCase().includes(q),
         )
       : checks;
     const dir = sort.dir === "asc" ? 1 : -1;
     return [...matched].sort((a, b) => {
       if (sort.key === "name") return dir * a.name.localeCompare(b.name);
-      const av = sort.key === "uptime" ? a.uptime[window] : a.responseMs[window];
-      const bv = sort.key === "uptime" ? b.uptime[window] : b.responseMs[window];
+      const av =
+        sort.key === "uptime" ? a.uptime[window] : a.responseMs[window];
+      const bv =
+        sort.key === "uptime" ? b.uptime[window] : b.responseMs[window];
       // Services with no data always sort to the bottom, regardless of direction.
       if (av == null && bv == null) return a.name.localeCompare(b.name);
       if (av == null) return 1;
@@ -56,7 +75,7 @@ export function Overview({ checks, updated }: { checks: CheckStatus[]; updated: 
     setSort((prev) =>
       prev.key === key
         ? { key, dir: prev.dir === "asc" ? "desc" : "asc" }
-        : { key, dir: SORTS.find((s) => s.key === key)!.defaultDir },
+        : { key, dir: SORTS.find((s) => s.key === key)?.defaultDir ?? "asc" },
     );
   }
 
@@ -82,7 +101,9 @@ export function Overview({ checks, updated }: { checks: CheckStatus[]; updated: 
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-sm font-medium text-muted">
-          {query.trim() ? `${visible.length} of ${checks.length} services` : "Services"}
+          {query.trim()
+            ? `${visible.length} of ${checks.length} services`
+            : "Services"}
         </h2>
         <div className="flex flex-wrap items-center gap-2">
           {/* Sort control */}
@@ -96,11 +117,15 @@ export function Overview({ checks, updated }: { checks: CheckStatus[]; updated: 
                   onClick={() => onSort(s.key)}
                   aria-label={`Sort by ${s.label}${active ? `, ${sort.dir === "asc" ? "ascending" : "descending"}` : ""}`}
                   className={`flex items-center gap-1 rounded-md px-2.5 py-1 transition-colors ${
-                    active ? "bg-foreground text-background" : "text-muted hover:text-foreground"
+                    active
+                      ? "bg-foreground text-background"
+                      : "text-muted hover:text-foreground"
                   }`}
                 >
                   {s.label}
-                  {active && <span aria-hidden>{sort.dir === "asc" ? "↑" : "↓"}</span>}
+                  {active && (
+                    <span aria-hidden>{sort.dir === "asc" ? "↑" : "↓"}</span>
+                  )}
                 </button>
               );
             })}
@@ -113,7 +138,9 @@ export function Overview({ checks, updated }: { checks: CheckStatus[]; updated: 
                 type="button"
                 onClick={() => setWindow(w.key)}
                 className={`rounded-md px-2.5 py-1 transition-colors ${
-                  window === w.key ? "bg-foreground text-background" : "text-muted hover:text-foreground"
+                  window === w.key
+                    ? "bg-foreground text-background"
+                    : "text-muted hover:text-foreground"
                 }`}
               >
                 {w.key}
@@ -137,7 +164,9 @@ export function Overview({ checks, updated }: { checks: CheckStatus[]; updated: 
                 href={`/site/${c.id}`}
                 className="flex items-center gap-4 px-5 py-4 transition-colors hover:bg-background"
               >
-                <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${meta.dot}`} />
+                <span
+                  className={`h-2.5 w-2.5 shrink-0 rounded-full ${meta.dot}`}
+                />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-medium">{c.name}</span>
                   <span className="block truncate text-sm text-muted">
@@ -145,12 +174,20 @@ export function Overview({ checks, updated }: { checks: CheckStatus[]; updated: 
                   </span>
                 </span>
                 <span className="hidden text-right sm:block">
-                  <span className="block text-sm font-medium tabular-nums">{fmtPct(c.uptime[window])}</span>
-                  <span className="block text-xs text-muted">{window} uptime</span>
+                  <span className="block text-sm font-medium tabular-nums">
+                    {fmtPct(c.uptime[window])}
+                  </span>
+                  <span className="block text-xs text-muted">
+                    {window} uptime
+                  </span>
                 </span>
                 <span className="w-24 text-right">
-                  <span className="block text-sm font-medium tabular-nums">{fmtMs(c.responseMs[window])}</span>
-                  <span className="block text-xs text-muted">{window} response</span>
+                  <span className="block text-sm font-medium tabular-nums">
+                    {fmtMs(c.responseMs[window])}
+                  </span>
+                  <span className="block text-xs text-muted">
+                    {window} response
+                  </span>
                 </span>
               </Link>
             </li>

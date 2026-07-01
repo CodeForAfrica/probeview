@@ -36,8 +36,14 @@ export const config = {
     info: env("SM_METRIC_INFO", "sm_check_info"),
     successSum: env("SM_METRIC_SUCCESS_SUM", "probe_all_success_sum"),
     successCount: env("SM_METRIC_SUCCESS_COUNT", "probe_all_success_count"),
-    durationSum: env("SM_METRIC_DURATION_SUM", "probe_all_duration_seconds_sum"),
-    durationCount: env("SM_METRIC_DURATION_COUNT", "probe_all_duration_seconds_count"),
+    durationSum: env(
+      "SM_METRIC_DURATION_SUM",
+      "probe_all_duration_seconds_sum",
+    ),
+    durationCount: env(
+      "SM_METRIC_DURATION_COUNT",
+      "probe_all_duration_seconds_count",
+    ),
   },
 
   /**
