@@ -1,5 +1,8 @@
 # Code for Africa — Status Page
 
+<img width="770" height="907" alt="image" src="https://github.com/user-attachments/assets/f4f0f93f-9e97-4ad4-935e-4144e29a08ac" />
+
+
 A public status page (Upptime-style) backed by **Grafana Synthetic Monitoring**.
 It shows, per monitored service: current status, uptime % across 24h / 7d / 30d /
 1y windows, an uptime history bar strip, and a response-time chart — plus a
