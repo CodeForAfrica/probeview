@@ -47,10 +47,6 @@ A change is ready when all of the above pass.
 
 ## Coding guidelines
 
-- **Read [`AGENTS.md`](AGENTS.md) first.** This repo tracks a recent, fast-moving
-  version of Next.js whose APIs and conventions may differ from older releases.
-  Check the relevant guide in `node_modules/next/dist/docs/` before making
-  framework-level changes.
 - **Keep the data layer and the UI separate.** Computation (uptime, status,
   latency) belongs in `lib/synthetics.ts`; components stay presentational.
 - **No new charting dependencies.** Charts are intentionally hand-rolled SVG.

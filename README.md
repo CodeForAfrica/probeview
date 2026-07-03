@@ -205,10 +205,6 @@ pnpm test:e2e         # Playwright end-to-end tests
 pnpm build            # production build (type-checked)
 ```
 
-> This project tracks a recent, fast-moving version of Next.js. Conventions may
-> differ from older releases — see [`AGENTS.md`](AGENTS.md) before making
-> framework-level changes.
-
 ---
 
 ## Contributing
