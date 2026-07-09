@@ -1,6 +1,17 @@
 # Code for Africa — Status Page
 
-<img width="770" height="907" alt="image" src="https://github.com/user-attachments/assets/f4f0f93f-9e97-4ad4-935e-4144e29a08ac" />
+<table width="100%">
+  <tr>
+    <td align="left">
+      <img width="100%" height="907" alt="image" src="https://github.com/user-attachments/assets/f4f0f93f-9e97-4ad4-935e-4144e29a08ac" />
+      Homepage
+    </td>
+    <td align="right">
+      <img width="100%" height="909" alt="image" src="https://github.com/user-attachments/assets/dc158009-7513-4b8a-8f33-4252ea80696c" />
+      Detail View
+    </td>
+  </tr>
+</table>
 
 
 A public status page (Upptime-style) backed by **Grafana Synthetic Monitoring**.
