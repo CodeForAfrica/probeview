@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Configuration & setup help
+    url: https://github.com/codeforafrica/probeview/blob/main/docs/configuration.md
+    about: Most setup issues (missing services, empty charts, 401/404) are covered here. Run scripts/introspect.mjs first.
+  - name: Security report
+    url: mailto:support@codeforafrica.org
+    about: Please report security vulnerabilities privately by email, not as a public issue.

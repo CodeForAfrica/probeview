@@ -1,8 +1,22 @@
 {
-  "name": "codeforafrica-status",
+  "name": "probeview",
   "version": "0.1.0",
   "private": true,
+  "description": "A self-hostable public status page backed by Grafana Synthetic Monitoring — uptime, latency, and per-service history, configured entirely by environment variables.",
+  "license": "GPL-3.0-or-later",
+  "keywords": [
+    "status-page",
+    "uptime",
+    "monitoring",
+    "grafana",
+    "synthetic-monitoring",
+    "prometheus",
+    "nextjs"
+  ],
   "packageManager": "pnpm@11.8.0",
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -29,7 +43,7 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
-    "@types/node": "^20",
+    "@types/node": "^24",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.0.3",
