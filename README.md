@@ -1,5 +1,7 @@
 # ProbeView
 
+[![CI](https://github.com/CodeForAfrica/probeview/actions/workflows/ci.yml/badge.svg)](https://github.com/CodeForAfrica/probeview/actions/workflows/ci.yml)
+
 <table width="100%">
   <tr>
     <td align="left">
