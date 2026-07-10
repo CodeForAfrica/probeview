@@ -109,3 +109,15 @@ change touches shared data flow, routing, config, or user-visible behavior.
 - When changing PromQL or Grafana integration behavior, prefer adding focused
   tests around query construction/parsing and update docs if configuration
   expectations change.
+
+## Pull Requests
+
+- When opening a PR or writing a PR description, follow
+  `.github/PULL_REQUEST_TEMPLATE.md` exactly: keep its section headings
+  (`What & why`, `Type of change`, `Checklist`, `Notes for reviewers`), fill
+  each one out, and check every checklist item you have actually satisfied.
+- Do not tick a checklist item you have not verified. If a check does not
+  apply, say why rather than silently ticking or deleting it.
+- Follow `CONTRIBUTING.md` for the expected checks and workflow, and use the
+  issue templates in `.github/ISSUE_TEMPLATE/` when filing bugs or feature
+  requests.
