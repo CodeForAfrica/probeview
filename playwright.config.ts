@@ -18,9 +18,11 @@ export default defineConfig({
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   // Test against a production build, as Next.js recommends. Locally, a server
-  // already on :3000 (e.g. `pnpm dev`) is reused so you skip the build.
+  // already on :3000 (e.g. `pnpm dev`) is reused so you skip the build. In CI
+  // the build runs as its own workflow step (so a build failure is reported
+  // distinctly from a test failure), so here we only start the prebuilt server.
   webServer: {
-    command: "pnpm build && pnpm start",
+    command: process.env.CI ? "pnpm start" : "pnpm build && pnpm start",
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
