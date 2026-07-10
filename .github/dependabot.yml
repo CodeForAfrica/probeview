@@ -11,3 +11,22 @@ updates:
       github-actions:
         patterns:
           - "*"
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    # Don't adopt a version the moment it ships. A `cooldown` lets a fresh
+    # release sit long enough for a compromised/yanked one to be caught before
+    # Dependabot ever opens a PR - the bigger the jump, the longer we wait.
+    cooldown:
+      default-days: 7
+      semver-patch-days: 7
+      semver-minor-days: 14
+      semver-major-days: 30
+    groups:
+      # Bundle routine minor/patch bumps into one reviewable PR.
+      npm-minor-patch:
+        update-types:
+          - minor
+          - patch
