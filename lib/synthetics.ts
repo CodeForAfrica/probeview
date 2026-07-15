@@ -23,6 +23,11 @@ const M = config.metrics;
 
 const STAT_RES = "1h";
 
+/** Current time as unix seconds — stamped as the data's fetch time. */
+function nowSeconds(): number {
+  return Math.floor(Date.now() / 1000);
+}
+
 /** PromQL range-vector duration for a window (e.g. "7d"). */
 function promRange(window: WindowKey): string {
   return window; // 24h / 7d / 30d / 1y are all valid PromQL durations
@@ -126,7 +131,7 @@ async function fetchOverview(): Promise<OverviewData> {
 
   // Stamped here, inside the cached function, so it records when Grafana was
   // actually queried — the value only advances on a cache miss.
-  return { checks: statuses, fetchedAt: Math.floor(Date.now() / 1000) };
+  return { checks: statuses, fetchedAt: nowSeconds() };
 }
 
 /**
@@ -138,7 +143,7 @@ async function fetchOverview(): Promise<OverviewData> {
  */
 export async function getOverview(): Promise<OverviewData> {
   if (config.mock) {
-    return { checks: mockOverview(), fetchedAt: Math.floor(Date.now() / 1000) };
+    return { checks: mockOverview(), fetchedAt: nowSeconds() };
   }
   return unstable_cache(fetchOverview, ["overview"], {
     revalidate: config.metricsCacheSeconds,
