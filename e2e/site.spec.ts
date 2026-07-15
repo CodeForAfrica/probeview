@@ -1,10 +1,21 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 
 // Detail page assertions against the deterministic MOCK fixtures (lib/mock.ts):
-// "pesacheck" is operational, "african-drone" is down.
+// "PesaCheck" is operational, "africanDRONE" is down. Public ids carry a hash
+// suffix, so resolve each detail URL from its overview link rather than
+// hardcoding it.
+async function gotoSite(page: Page, linkName: RegExp): Promise<void> {
+  await page.goto("/");
+  const href = await page
+    .getByRole("link", { name: linkName })
+    .getAttribute("href");
+  if (!href) throw new Error(`No overview link matching ${linkName}`);
+  await page.goto(href);
+}
+
 test.describe("site detail page", () => {
   test("renders an operational service's details", async ({ page }) => {
-    await page.goto("/site/pesacheck");
+    await gotoSite(page, /PesaCheck/);
 
     await expect(
       page.getByRole("heading", { name: "PesaCheck" }),
@@ -43,7 +54,7 @@ test.describe("site detail page", () => {
   test("marks a down service as down with no current response time", async ({
     page,
   }) => {
-    await page.goto("/site/african-drone");
+    await gotoSite(page, /africanDRONE/);
     await expect(
       page.getByRole("heading", { name: "africanDRONE" }),
     ).toBeVisible();
@@ -53,9 +64,9 @@ test.describe("site detail page", () => {
   });
 
   test("switches the window via the tab links", async ({ page }) => {
-    await page.goto("/site/pesacheck");
+    await gotoSite(page, /PesaCheck/);
     await page.getByRole("link", { name: "30d", exact: true }).click();
-    await expect(page).toHaveURL("/site/pesacheck?window=30d");
+    await expect(page).toHaveURL(/\/site\/pesacheck-[a-z0-9]+\?window=30d$/);
     await expect(
       page.getByRole("heading", { name: "PesaCheck" }),
     ).toBeVisible();
