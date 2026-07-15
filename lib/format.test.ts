@@ -72,6 +72,14 @@ describe("checkId", () => {
     );
   });
 
+  it("suffixes a 64-bit hash (pins the digest against a narrower regression)", () => {
+    // Pinned value from a 64-bit FNV-1a over "Public API https://api.example.org".
+    // A regression to the old 32-bit digest would change this suffix.
+    expect(checkId("Public API", "https://api.example.org")).toBe(
+      "public-api-3v89g0yt4y0l",
+    );
+  });
+
   it("falls back to the target slug, then 'check', for an empty job", () => {
     expect(checkId("", "https://example.org")).toMatch(
       /^example-org-[a-z0-9]+$/,

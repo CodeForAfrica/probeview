@@ -19,9 +19,25 @@ export function fnv1a(s: string): number {
   return h >>> 0;
 }
 
-/** Short, stable, URL-safe hash of a string (FNV-1a, base36). */
+/** FNV-1a hash of a string as an unsigned 64-bit BigInt. */
+function fnv1a64(s: string): bigint {
+  const mask = (1n << 64n) - 1n;
+  let h = 14695981039346656037n;
+  for (let i = 0; i < s.length; i++) {
+    h ^= BigInt(s.charCodeAt(i));
+    h = (h * 1099511628211n) & mask;
+  }
+  return h;
+}
+
+/**
+ * Short, stable, URL-safe hash of a string (64-bit FNV-1a, base36).
+ *
+ * 64 bits keeps the birthday-collision probability negligible even for
+ * installations with millions of checks sharing a job slug.
+ */
 function shortHash(s: string): string {
-  return fnv1a(s).toString(36);
+  return fnv1a64(s).toString(36);
 }
 
 /**
@@ -40,12 +56,10 @@ function baseCheckId(job: string, instance: string): string {
 /**
  * Unique, deterministic public id for a check.
  *
- * The id always appends a stable hash
- * of the full identity to the readable slug: `<job-slug>-<hash>`.
- *
  * The hash depends only on this check's own (job, target), so an id never
- * changes because some *other* check was added, removed, or renamed. The slug
- * leads so URLs stay scannable and sort/autocomplete by service name.
+ * changes because some *other* check was added, removed, or renamed.
+ * 64 bits makes an accidental collision (even among many targets under one job)
+ * negligibly unlikely. The slug leads so URLs stay scannable and sort/autocomplete by service name.
  */
 export function checkId(job: string, instance: string): string {
   return `${baseCheckId(job, instance)}-${shortHash(checkIdentity(job, instance))}`;
