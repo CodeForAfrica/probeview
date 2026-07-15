@@ -67,17 +67,17 @@ already-computed numbers and markup.
 
 - **Data freshness is governed by one cache layer.** The Prometheus client and
   the `lib/synthetics.ts` accessors cache responses for
-  [`REVALIDATE_SECONDS`](configuration.md#revalidate_seconds), which bounds how
-  often Grafana is queried no matter how much public traffic arrives. The
+  [`METRICS_CACHE_SECONDS`](configuration.md#metrics_cache_seconds), which bounds
+  how often Grafana is queried no matter how much public traffic arrives. The
   overview's `updated` value is stamped inside that cache, so it reports true
   metric freshness rather than render time.
 
-- **Route rendering is separate from the data cache.** `REVALIDATE_SECONDS`
+- **Route rendering is separate from the data cache.** `METRICS_CACHE_SECONDS`
   cannot set a route's ISR interval — Next requires that to be a static literal
   — so the overview (`/`) uses a fixed `revalidate` literal and the detail route
   (`/site/[id]`) is rendered on demand because it reads `searchParams`. Either
   way, both routes read the same cached data, so the effective freshness bound
-  is always `REVALIDATE_SECONDS`.
+  is always `METRICS_CACHE_SECONDS`.
 
 - **Secrets stay on the server.** The Grafana credentials have no
   `NEXT_PUBLIC_` prefix, so they are only ever read in Server Components / the

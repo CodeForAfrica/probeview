@@ -19,7 +19,7 @@ const { mockConfig, mockData, prom } = vi.hoisted(() => ({
     },
     mock: false,
     currentWindow: "1h",
-    revalidate: 60,
+    metricsCacheSeconds: 60,
     thresholds: { operational: 99.9, degraded: 95 },
   },
   mockData: { mockOverview: vi.fn(), mockSiteHistory: vi.fn() },

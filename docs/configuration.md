@@ -94,7 +94,7 @@ Accepts any Prometheus duration string (`5m`, `30m`, `1h`, `2h`, …).
 
 ## Caching
 
-### `REVALIDATE_SECONDS`
+### `METRICS_CACHE_SECONDS`
 
 - **Default:** `60`
 - The **metrics-cache window**: how long Grafana/Prometheus responses are cached
@@ -111,8 +111,8 @@ Accepts any Prometheus duration string (`5m`, `30m`, `1h`, `2h`, …).
 > cannot be driven by an environment variable. The overview route (`/`) uses a
 > fixed `revalidate` literal and the detail route (`/site/[id]`) is
 > server-rendered on demand (it reads the `?window=` search param). Both still
-> read cached data, so `REVALIDATE_SECONDS` remains the effective bound on data
-> freshness regardless of how often a route re-renders.
+> read cached data, so `METRICS_CACHE_SECONDS` remains the effective bound on
+> data freshness regardless of how often a route re-renders.
 
 ---
 

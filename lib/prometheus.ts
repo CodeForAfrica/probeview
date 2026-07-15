@@ -36,7 +36,7 @@ async function call(
       "Content-Type": "application/x-www-form-urlencoded",
     },
     body: new URLSearchParams(params).toString(),
-    next: { revalidate: config.revalidate },
+    next: { revalidate: config.metricsCacheSeconds },
   });
 
   if (!res.ok) {

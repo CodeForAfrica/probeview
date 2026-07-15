@@ -70,8 +70,11 @@ change touches shared data flow, routing, config, or user-visible behavior.
   do not pass tokens or raw auth details into Client Components.
 - Data-fetching modules that use Prometheus or `next/cache` should remain
   server-only. Follow the existing `import "server-only"` pattern.
-- Pages currently use ISR via `export const revalidate = 60`; if you change cache
-  behavior, keep `REVALIDATE_SECONDS` and `config.revalidate` in mind.
+- The overview route uses ISR via a fixed `export const revalidate = 60` literal
+  (Next requires a static value); the detail route renders on demand. Data-cache
+  freshness is separate and env-driven via `METRICS_CACHE_SECONDS` /
+  `config.metricsCacheSeconds`. Keep both layers in mind if you change cache
+  behavior.
 - Use `next/link`, `next/font`, and App Router metadata APIs according to the
   local Next docs, not memory of older Next releases.
 

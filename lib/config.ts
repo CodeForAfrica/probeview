@@ -68,7 +68,7 @@ export const config = {
    * interval: Next requires that to be a statically-analyzable literal, so the
    * overview route uses a fixed `revalidate` and the detail route is dynamic.
    */
-  revalidate: Number(env("REVALIDATE_SECONDS", "60")),
+  metricsCacheSeconds: Number(env("METRICS_CACHE_SECONDS", "60")),
 
   siteName: env("NEXT_PUBLIC_SITE_NAME", "Code for Africa"),
   tagline: env("NEXT_PUBLIC_SITE_TAGLINE", "Status of our public services"),

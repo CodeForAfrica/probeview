@@ -130,17 +130,18 @@ async function fetchOverview(): Promise<OverviewData> {
 }
 
 /**
- * Public overview accessor — cached for `config.revalidate` seconds. This bounds
- * total Grafana query volume to one set of queries per refresh window, no matter
- * how many visitors hit the page. `fetchedAt` reflects that cached fetch time,
- * so callers can report true metric freshness rather than render time.
+ * Public overview accessor — cached for `config.metricsCacheSeconds` seconds.
+ * This bounds total Grafana query volume to one set of queries per refresh
+ * window, no matter how many visitors hit the page. `fetchedAt` reflects that
+ * cached fetch time, so callers can report true metric freshness rather than
+ * render time.
  */
 export async function getOverview(): Promise<OverviewData> {
   if (config.mock) {
     return { checks: mockOverview(), fetchedAt: Math.floor(Date.now() / 1000) };
   }
   return unstable_cache(fetchOverview, ["overview"], {
-    revalidate: config.revalidate,
+    revalidate: config.metricsCacheSeconds,
     tags: ["status"],
   })();
 }
@@ -271,9 +272,9 @@ async function fetchSiteHistory(
 }
 
 /**
- * Public per-site accessor — cached per (id, window) for `config.revalidate`
- * seconds. A thousand views of the same site in that window cost one set of
- * Grafana queries, not a thousand.
+ * Public per-site accessor — cached per (id, window) for
+ * `config.metricsCacheSeconds` seconds. A thousand views of the same site in
+ * that window cost one set of Grafana queries, not a thousand.
  */
 export async function getSiteHistory(
   id: string,
@@ -284,7 +285,7 @@ export async function getSiteHistory(
     () => fetchSiteHistory(id, window),
     ["site-history", id, window],
     {
-      revalidate: config.revalidate,
+      revalidate: config.metricsCacheSeconds,
       tags: ["status"],
     },
   )();
