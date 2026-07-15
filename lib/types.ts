@@ -35,6 +35,17 @@ export interface CheckStatus extends Check {
   responseMs: MetricByWindow;
 }
 
+/**
+ * The overview payload plus the time its data was actually fetched from
+ * Grafana. `fetchedAt` is captured inside the data cache, so it reflects
+ * metric freshness (the last cache miss), not page render time.
+ */
+export interface OverviewData {
+  checks: CheckStatus[];
+  /** Unix seconds at which the underlying Grafana data was fetched. */
+  fetchedAt: number;
+}
+
 /** One time bucket of the uptime history bar strip. */
 export interface UptimeBucket {
   /** Bucket start, unix seconds. */

@@ -60,7 +60,14 @@ export const config = {
     degraded: Number(env("UPTIME_DEGRADED", "95")),
   },
 
-  /** Cache window (seconds) for Prometheus responses / page revalidation. */
+  /**
+   * Metrics-cache window (seconds) for Grafana/Prometheus responses. Governs the
+   * `fetch` cache in lib/prometheus.ts and the `unstable_cache` wrappers in
+   * lib/synthetics.ts — i.e. how often Grafana is actually queried and how old
+   * the displayed `updated` value can be. It does NOT set the route-segment ISR
+   * interval: Next requires that to be a statically-analyzable literal, so the
+   * overview route uses a fixed `revalidate` and the detail route is dynamic.
+   */
   revalidate: Number(env("REVALIDATE_SECONDS", "60")),
 
   siteName: env("NEXT_PUBLIC_SITE_NAME", "Code for Africa"),

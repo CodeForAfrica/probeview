@@ -18,8 +18,8 @@ lib/prometheus.ts    minimal cached HTTP client: instantQuery / rangeQuery
 lib/synthetics.ts    listChecks → getOverview → getSiteHistory
         │            (discover services, compute uptime/status/latency)
         ▼
-Server Components    app/page.tsx (overview), app/site/[id]/page.tsx (detail)
-        │            ISR via `export const revalidate`
+Server Components    app/page.tsx (overview, ISR), app/site/[id]/page.tsx (detail, dynamic)
+        │            data freshness bounded by the cache above, not route rendering
         ▼
 components/*         presentational UI + hand-rolled SVG charts
 ```
@@ -65,10 +65,19 @@ already-computed numbers and markup.
   configured windows (and [`CURRENT_WINDOW`](configuration.md#current-updown-window)
   for the live dot).
 
-- **Caching happens in two layers.** The Prometheus client caches responses, and
-  pages use ISR — both governed by
-  [`REVALIDATE_SECONDS`](configuration.md#revalidate_seconds). This keeps public
-  traffic from translating one-to-one into Prometheus queries.
+- **Data freshness is governed by one cache layer.** The Prometheus client and
+  the `lib/synthetics.ts` accessors cache responses for
+  [`REVALIDATE_SECONDS`](configuration.md#revalidate_seconds), which bounds how
+  often Grafana is queried no matter how much public traffic arrives. The
+  overview's `updated` value is stamped inside that cache, so it reports true
+  metric freshness rather than render time.
+
+- **Route rendering is separate from the data cache.** `REVALIDATE_SECONDS`
+  cannot set a route's ISR interval — Next requires that to be a static literal
+  — so the overview (`/`) uses a fixed `revalidate` literal and the detail route
+  (`/site/[id]`) is rendered on demand because it reads `searchParams`. Either
+  way, both routes read the same cached data, so the effective freshness bound
+  is always `REVALIDATE_SECONDS`.
 
 - **Secrets stay on the server.** The Grafana credentials have no
   `NEXT_PUBLIC_` prefix, so they are only ever read in Server Components / the

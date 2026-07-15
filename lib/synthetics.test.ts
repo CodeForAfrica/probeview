@@ -112,7 +112,9 @@ describe("getOverview", () => {
     const fixture = [{ id: "fixture" }];
     mockData.mockOverview.mockReturnValue(fixture);
 
-    expect(await getOverview()).toBe(fixture);
+    const overview = await getOverview();
+    expect(overview.checks).toBe(fixture);
+    expect(typeof overview.fetchedAt).toBe("number");
     expect(prom.instantQuery).not.toHaveBeenCalled();
   });
 
@@ -152,8 +154,11 @@ describe("getOverview", () => {
   it("maps per-window uptime and response, deriving an up status", async () => {
     wireOverview("100");
 
-    const [site, ...rest] = await getOverview();
+    const { checks, fetchedAt } = await getOverview();
+    const [site, ...rest] = checks;
 
+    // Freshness is stamped inside the cached fetch, not at render time.
+    expect(typeof fetchedAt).toBe("number");
     expect(rest).toHaveLength(0);
     expect(site).toMatchObject({
       id: SITE_A_ID,
@@ -168,14 +173,14 @@ describe("getOverview", () => {
 
   it("derives a down status when current reachability is zero", async () => {
     wireOverview("0");
-    const [site] = await getOverview();
-    expect(site.status).toBe("down");
+    const { checks } = await getOverview();
+    expect(checks[0].status).toBe("down");
   });
 
   it("derives an unknown status when current reachability is absent", async () => {
     wireOverview("");
-    const [site] = await getOverview();
-    expect(site.status).toBe("unknown");
+    const { checks } = await getOverview();
+    expect(checks[0].status).toBe("unknown");
   });
 });
 

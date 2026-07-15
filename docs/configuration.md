@@ -97,10 +97,22 @@ Accepts any Prometheus duration string (`5m`, `30m`, `1h`, `2h`, …).
 ### `REVALIDATE_SECONDS`
 
 - **Default:** `60`
-- Controls two things at once: how long Prometheus responses are cached
-  server-side, and the ISR page-revalidation window. Higher values mean fewer
-  Prometheus queries (cheaper, but staler data); lower values mean fresher data
-  at higher query cost. `60` is a good balance for most public pages.
+- The **metrics-cache window**: how long Grafana/Prometheus responses are cached
+  server-side (the `fetch` cache in `lib/prometheus.ts` and the `unstable_cache`
+  wrappers in `lib/synthetics.ts`). Higher values mean fewer Prometheus queries
+  (cheaper, but staler data); lower values mean fresher data at higher query
+  cost. `60` is a good balance for most public pages.
+- This is the single knob for **how often Grafana is queried** and therefore how
+  old the overview's `updated` timestamp can be — that value is derived from the
+  actual fetch time, not the page render time.
+
+> **What it does _not_ control: the route-revalidation (ISR) interval.** Next.js
+> requires a route's `revalidate` to be a statically-analyzable literal, so it
+> cannot be driven by an environment variable. The overview route (`/`) uses a
+> fixed `revalidate` literal and the detail route (`/site/[id]`) is
+> server-rendered on demand (it reads the `?window=` search param). Both still
+> read cached data, so `REVALIDATE_SECONDS` remains the effective bound on data
+> freshness regardless of how often a route re-renders.
 
 ---
 

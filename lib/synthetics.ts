@@ -7,8 +7,8 @@ import { mockOverview, mockSiteHistory } from "./mock";
 import { escapeLabel, instantQuery, rangeQuery } from "./prometheus";
 import {
   type Check,
-  type CheckStatus,
   type MetricByWindow,
+  type OverviewData,
   type ResponsePoint,
   type ResponseStats,
   type SiteHistory,
@@ -88,7 +88,7 @@ function toKeyedNumbers(
   return out;
 }
 
-async function fetchOverview(): Promise<CheckStatus[]> {
+async function fetchOverview(): Promise<OverviewData> {
   const checks = await listChecks();
 
   const results = await Promise.all([
@@ -103,7 +103,7 @@ async function fetchOverview(): Promise<CheckStatus[]> {
     toKeyedNumbers(results[1 + WINDOWS.length + i]),
   );
 
-  return checks.map((c) => {
+  const statuses = checks.map((c) => {
     const k = checkIdentity(c.job, c.instance);
     const uptime = {} as MetricByWindow;
     const responseMs = {} as MetricByWindow;
@@ -123,15 +123,22 @@ async function fetchOverview(): Promise<CheckStatus[]> {
       responseMs,
     };
   });
+
+  // Stamped here, inside the cached function, so it records when Grafana was
+  // actually queried — the value only advances on a cache miss.
+  return { checks: statuses, fetchedAt: Math.floor(Date.now() / 1000) };
 }
 
 /**
  * Public overview accessor — cached for `config.revalidate` seconds. This bounds
  * total Grafana query volume to one set of queries per refresh window, no matter
- * how many visitors hit the page.
+ * how many visitors hit the page. `fetchedAt` reflects that cached fetch time,
+ * so callers can report true metric freshness rather than render time.
  */
-export async function getOverview(): Promise<CheckStatus[]> {
-  if (config.mock) return mockOverview();
+export async function getOverview(): Promise<OverviewData> {
+  if (config.mock) {
+    return { checks: mockOverview(), fetchedAt: Math.floor(Date.now() / 1000) };
+  }
   return unstable_cache(fetchOverview, ["overview"], {
     revalidate: config.revalidate,
     tags: ["status"],

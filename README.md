@@ -151,7 +151,7 @@ and when to change it.
 | `UPTIME_OPERATIONAL` | `99.9` | Uptime % at/above which a service is green |
 | `UPTIME_DEGRADED` | `95` | Uptime % at/above which a service is amber (red below) |
 | `CURRENT_WINDOW` | `1h` | Window used to decide current up/down |
-| `REVALIDATE_SECONDS` | `60` | Cache / page-revalidation window in seconds |
+| `REVALIDATE_SECONDS` | `60` | Metrics-cache window (seconds) for Grafana queries; see note below |
 | `SM_METRIC_*` | SM schema defaults | Override metric names if your stack differs |
 
 > ⚠️ Anything prefixed `NEXT_PUBLIC_` is shipped to the browser. The Grafana
@@ -198,8 +198,13 @@ Grafana Synthetics ──► Prometheus (Mimir) ──► lib/prometheus.ts ─�
 Design notes:
 
 - Services are **discovered dynamically** from `sm_check_info` — nothing is hardcoded.
-- Pages use ISR (`export const revalidate`) and the Prometheus client caches
-  responses, so the public page is cheap to serve under load.
+- The Prometheus client and data layer cache responses for `REVALIDATE_SECONDS`,
+  so the public page is cheap to serve under load and the `updated` timestamp
+  reflects when Grafana was last queried. `REVALIDATE_SECONDS` sets **how often
+  Grafana is queried**, not the route ISR interval — Next requires the latter to
+  be a static literal, so the overview route uses a fixed `revalidate` and the
+  detail route renders on demand. See
+  [`docs/configuration.md`](docs/configuration.md#revalidate_seconds).
 
 For a deeper walk-through, see [`docs/architecture.md`](docs/architecture.md).
 
