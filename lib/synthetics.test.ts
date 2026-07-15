@@ -8,7 +8,7 @@ const SITE_A_ID = checkId("Site A", "https://a.org");
 // Shared mock surface. `prom.instantQuery` / `prom.rangeQuery` are driven
 // per-test via mockImplementation; query strings are matched on the metric
 // tokens and range below.
-const { mockConfig, mockData, prom } = vi.hoisted(() => ({
+const { mockConfig, mockData, prom, unstableCache } = vi.hoisted(() => ({
   mockConfig: {
     metrics: {
       info: "sm_info",
@@ -28,13 +28,16 @@ const { mockConfig, mockData, prom } = vi.hoisted(() => ({
     rangeQuery: vi.fn(),
     escapeLabel: vi.fn((s: string) => s),
   },
+  // Passthrough that also records the options each accessor caches with, so
+  // tests can assert the data-cache revalidate window is wired from config.
+  unstableCache: vi.fn((fn: unknown) => fn),
 }));
 
 vi.mock("./config", () => ({ config: mockConfig }));
 vi.mock("./mock", () => mockData);
 vi.mock("./prometheus", () => prom);
 // Run the cached function straight through, bypassing Next's cache layer.
-vi.mock("next/cache", () => ({ unstable_cache: (fn: unknown) => fn }));
+vi.mock("next/cache", () => ({ unstable_cache: unstableCache }));
 
 type Sample = { metric: Record<string, string>; value: [number, string] };
 const sample = (metric: Record<string, string>, v: string): Sample => ({
@@ -302,5 +305,35 @@ describe("getSiteHistory", () => {
         (q) => q.startsWith("max_over_time") && q.includes("[7d:1h]"),
       ),
     ).toBe(true);
+  });
+});
+
+describe("data-cache configuration", () => {
+  // unstable_cache(fn, keyParts, options) — the options object is the 3rd arg.
+  const lastCacheRevalidate = (): unknown => {
+    const calls = unstableCache.mock.calls as unknown as unknown[][];
+    const options = calls.at(-1)?.[2] as { revalidate?: unknown } | undefined;
+    return options?.revalidate;
+  };
+
+  it("caches the overview with the configured metrics-cache window", async () => {
+    mockConfig.metricsCacheSeconds = 300;
+    prom.instantQuery.mockResolvedValue([]);
+
+    await getOverview();
+
+    // Wired from config, not a route-style hardcoded literal.
+    expect(lastCacheRevalidate()).toBe(300);
+    mockConfig.metricsCacheSeconds = 60;
+  });
+
+  it("caches per-site history with the configured metrics-cache window", async () => {
+    mockConfig.metricsCacheSeconds = 300;
+    prom.instantQuery.mockResolvedValue([]);
+
+    await getSiteHistory("anything", "24h");
+
+    expect(lastCacheRevalidate()).toBe(300);
+    mockConfig.metricsCacheSeconds = 60;
   });
 });
