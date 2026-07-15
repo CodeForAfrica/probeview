@@ -9,6 +9,48 @@ export function slugify(s: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
+/** FNV-1a hash of a string as an unsigned 32-bit integer. */
+export function fnv1a(s: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+/** Short, stable, URL-safe hash of a string (FNV-1a, base36). */
+function shortHash(s: string): string {
+  return fnv1a(s).toString(36);
+}
+
+/**
+ * Canonical identity string for a check. A check's Grafana identity is the
+ * combination of job name + target (instance), so both must key it.
+ */
+export function checkIdentity(job: string, instance: string): string {
+  return `${job} ${instance}`;
+}
+
+/** Readable slug base for a check: its job slug (target slug if job is empty). */
+function baseCheckId(job: string, instance: string): string {
+  return slugify(job) || slugify(instance) || "check";
+}
+
+/**
+ * Unique, deterministic public id for a check.
+ *
+ * The id always appends a stable hash
+ * of the full identity to the readable slug: `<job-slug>-<hash>`.
+ *
+ * The hash depends only on this check's own (job, target), so an id never
+ * changes because some *other* check was added, removed, or renamed. The slug
+ * leads so URLs stay scannable and sort/autocomplete by service name.
+ */
+export function checkId(job: string, instance: string): string {
+  return `${baseCheckId(job, instance)}-${shortHash(checkIdentity(job, instance))}`;
+}
+
 /** Format an uptime percentage (0–100). */
 export function fmtPct(n: number | null): string {
   if (n == null || Number.isNaN(n)) return "—";

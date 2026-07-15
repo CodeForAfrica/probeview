@@ -4,7 +4,7 @@
  * in transparently once env is set — see lib/synthetics.ts.
  */
 import { bucketPlan } from "./buckets";
-import { deriveStatus } from "./format";
+import { checkId, checkIdentity, deriveStatus, fnv1a } from "./format";
 import {
   type CheckStatus,
   type MetricByWindow,
@@ -17,7 +17,6 @@ import {
 } from "./types";
 
 interface MockSite {
-  id: string;
   name: string;
   target: string;
   region: string;
@@ -30,7 +29,6 @@ interface MockSite {
 
 const MOCK_SITES: MockSite[] = [
   {
-    id: "pesacheck",
     name: "PesaCheck",
     target: "https://pesacheck.org",
     region: "Frankfurt",
@@ -39,7 +37,6 @@ const MOCK_SITES: MockSite[] = [
     currentlyUp: true,
   },
   {
-    id: "code-for-africa",
     name: "Code for Africa",
     target: "https://codeforafrica.org",
     region: "Frankfurt",
@@ -48,7 +45,6 @@ const MOCK_SITES: MockSite[] = [
     currentlyUp: true,
   },
   {
-    id: "sensors-africa",
     name: "sensors.AFRICA",
     target: "https://sensors.africa",
     region: "London",
@@ -57,7 +53,6 @@ const MOCK_SITES: MockSite[] = [
     currentlyUp: true,
   },
   {
-    id: "academy-africa",
     name: "Academy",
     target: "https://academy.africa",
     region: "Frankfurt",
@@ -66,7 +61,6 @@ const MOCK_SITES: MockSite[] = [
     currentlyUp: true,
   },
   {
-    id: "african-drone",
     name: "africanDRONE",
     target: "https://africandrone.org",
     region: "London",
@@ -75,7 +69,6 @@ const MOCK_SITES: MockSite[] = [
     currentlyUp: false,
   },
   {
-    id: "the-continent",
     name: "The Continent",
     target: "https://thecontinent.org",
     region: "New York",
@@ -83,7 +76,35 @@ const MOCK_SITES: MockSite[] = [
     baseMs: 180,
     currentlyUp: true,
   },
+  // Two checks whose job names collide after slug normalization ("Public API"
+  // and "Public-API" both slugify to "public-api") but target different URLs.
+  // They exercise the (job, instance) id disambiguation end to end.
+  {
+    name: "Public API",
+    target: "https://api.example.org",
+    region: "Frankfurt",
+    baseUptime: 99.9,
+    baseMs: 150,
+    currentlyUp: true,
+  },
+  {
+    name: "Public-API",
+    target: "https://api.example.net",
+    region: "London",
+    baseUptime: 99.8,
+    baseMs: 160,
+    currentlyUp: true,
+  },
 ];
+
+function idFor(site: MockSite): string {
+  return checkId(site.name, site.target);
+}
+
+/** Stable RNG seed for a site, tied to its identity. */
+function seedFor(site: MockSite): string {
+  return checkIdentity(site.name, site.target);
+}
 
 /** Small deterministic PRNG so fixtures are stable across renders. */
 function rng(seed: number): () => number {
@@ -97,17 +118,8 @@ function rng(seed: number): () => number {
   };
 }
 
-function hash(str: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < str.length; i++) {
-    h ^= str.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return h >>> 0;
-}
-
 function uptimeByWindow(site: MockSite): UptimeByWindow {
-  const r = rng(hash(site.id));
+  const r = rng(fnv1a(seedFor(site)));
   const out = {} as UptimeByWindow;
   for (const key of WINDOW_KEYS) {
     // Shorter windows wobble a little more around the baseline.
@@ -120,7 +132,7 @@ function uptimeByWindow(site: MockSite): UptimeByWindow {
 }
 
 function responseByWindow(site: MockSite): MetricByWindow {
-  const r = rng(hash(`${site.id}:resp`));
+  const r = rng(fnv1a(`${seedFor(site)}:resp`));
   const out = {} as MetricByWindow;
   for (const key of WINDOW_KEYS) {
     if (!site.currentlyUp) {
@@ -138,7 +150,7 @@ export function mockOverview(): CheckStatus[] {
   return MOCK_SITES.map((site) => {
     const uptime = uptimeByWindow(site);
     return {
-      id: site.id,
+      id: idFor(site),
       name: site.name,
       target: site.target,
       job: site.name,
@@ -155,12 +167,12 @@ export function mockSiteHistory(
   id: string,
   window: WindowKey,
 ): SiteHistory | null {
-  const site = MOCK_SITES.find((s) => s.id === id);
+  const site = MOCK_SITES.find((s) => idFor(s) === id);
   if (!site) return null;
 
   const plan = bucketPlan(window);
   const uptime = uptimeByWindow(site);
-  const r = rng(hash(`${site.id}:${window}`));
+  const r = rng(fnv1a(`${seedFor(site)}:${window}`));
 
   const bars: UptimeBucket[] = [];
   const response: ResponsePoint[] = [];
@@ -195,7 +207,7 @@ export function mockSiteHistory(
 
   return {
     check: {
-      id: site.id,
+      id,
       name: site.name,
       target: site.target,
       job: site.name,
