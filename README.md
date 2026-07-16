@@ -152,6 +152,7 @@ and when to change it.
 | `UPTIME_DEGRADED` | `95` | Uptime % at/above which a service is amber (red below) |
 | `CURRENT_WINDOW` | `1h` | Window used to decide current up/down |
 | `METRICS_CACHE_SECONDS` | `60` | Metrics-cache window (seconds) for Grafana queries; see note below |
+| `METRICS_RETENTION_DAYS` | unset | Metrics retention in days; longer windows show insufficient coverage and charts clamp to retained data |
 | `SM_METRIC_*` | SM schema defaults | Override metric names if your stack differs |
 
 > ⚠️ Anything prefixed `NEXT_PUBLIC_` is shipped to the browser. The Grafana
