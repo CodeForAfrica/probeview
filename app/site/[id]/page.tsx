@@ -29,7 +29,18 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  return { title: `${id} · ${config.siteName} Status` };
+  const site = await getSiteHistory(id, "7d").catch(() => null);
+  let label = id;
+  if (site) {
+    const target = site.check.target
+      .replace(/^https?:\/\//, "")
+      .replace(/\/$/, "");
+    label =
+      site.check.job && site.check.job !== target
+        ? `${site.check.job} · ${target}`
+        : site.check.job || target;
+  }
+  return { title: `${label} · ${config.siteName} Status` };
 }
 
 export default async function SitePage({
