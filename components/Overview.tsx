@@ -10,8 +10,8 @@ import {
   type WindowKey,
   windowWithinRetention,
 } from "@/lib/types";
+import { CoverageNote } from "./CoverageNote";
 import { Search } from "./icons";
-import { CoverageNote } from "./Notice";
 import { StatusBanner } from "./StatusBanner";
 
 /**

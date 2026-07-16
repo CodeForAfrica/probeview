@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { CoverageNote } from "@/components/CoverageNote";
 import { ArrowLeft, ExternalLink } from "@/components/icons";
-import { CoverageNote, ErrorPanel } from "@/components/Notice";
+import { ErrorPanel } from "@/components/Notice";
 import { ResponseTimeChart } from "@/components/ResponseTimeChart";
 import { StatusBadge } from "@/components/StatusBadge";
 import { UptimeBars } from "@/components/UptimeBars";
