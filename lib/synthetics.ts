@@ -2,7 +2,7 @@ import "server-only";
 import { unstable_cache } from "next/cache";
 import { bucketPlan, responsePlan } from "./buckets";
 import { config } from "./config";
-import { deriveStatus, slugify } from "./format";
+import { checkId, checkIdentity, deriveStatus } from "./format";
 import { mockOverview, mockSiteHistory } from "./mock";
 import { escapeLabel, instantQuery, rangeQuery } from "./prometheus";
 import {
@@ -28,11 +28,6 @@ function promRange(window: WindowKey): string {
   return window; // 24h / 7d / 30d / 1y are all valid PromQL durations
 }
 
-/** Stable map key for a (job, instance) pair. */
-function key(job: string, instance: string): string {
-  return `${job} ${instance}`;
-}
-
 function matcher(check: Check): string {
   return `{job="${escapeLabel(check.job)}",instance="${escapeLabel(check.instance)}"}`;
 }
@@ -49,10 +44,10 @@ export async function listChecks(): Promise<Check[]> {
     const job = s.metric.job ?? s.metric.check_name ?? "";
     const instance = s.metric.instance ?? "";
     if (!job || !instance) continue;
-    const k = key(job, instance);
+    const k = checkIdentity(job, instance);
     if (byKey.has(k)) continue;
     byKey.set(k, {
-      id: slugify(job || instance),
+      id: checkId(job, instance),
       name: job,
       target: instance,
       job,
@@ -88,7 +83,7 @@ function toKeyedNumbers(
   for (const s of samples) {
     const v = Number(s.value[1]);
     if (Number.isFinite(v))
-      out.set(key(s.metric.job ?? "", s.metric.instance ?? ""), v);
+      out.set(checkIdentity(s.metric.job ?? "", s.metric.instance ?? ""), v);
   }
   return out;
 }
@@ -109,7 +104,7 @@ async function fetchOverview(): Promise<CheckStatus[]> {
   );
 
   return checks.map((c) => {
-    const k = key(c.job, c.instance);
+    const k = checkIdentity(c.job, c.instance);
     const uptime = {} as MetricByWindow;
     const responseMs = {} as MetricByWindow;
     WINDOWS.forEach((w, i) => {

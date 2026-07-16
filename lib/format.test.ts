@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   barColor,
+  checkId,
   deriveStatus,
   fmtMs,
   fmtPct,
@@ -31,6 +32,59 @@ describe("slugify", () => {
   it("returns an empty string when there is nothing slug-able", () => {
     expect(slugify("")).toBe("");
     expect(slugify("---")).toBe("");
+  });
+});
+
+describe("checkId", () => {
+  it("prefixes the readable job slug and appends a hash suffix", () => {
+    expect(checkId("PesaCheck", "https://pesacheck.org")).toMatch(
+      /^pesacheck-[a-z0-9]+$/,
+    );
+    expect(checkId("The Continent", "https://thecontinent.org")).toMatch(
+      /^the-continent-[a-z0-9]+$/,
+    );
+  });
+
+  it("gives checks that share a job name but target different URLs distinct ids", () => {
+    const a = checkId("Public API", "https://api.example.org");
+    const b = checkId("Public API", "https://api.example.net");
+    expect(a).not.toBe(b);
+    expect(a.startsWith("public-api-")).toBe(true);
+    expect(b.startsWith("public-api-")).toBe(true);
+  });
+
+  it("distinguishes job names that collide only after slug normalization", () => {
+    const a = checkId("Public API", "https://api.example.org");
+    const b = checkId("Public-API", "https://api.example.org");
+    const c = checkId("Public.API", "https://api.example.org");
+    expect(a).not.toBe(b);
+    expect(a).not.toBe(c);
+    expect(b).not.toBe(c);
+    expect(a.startsWith("public-api-")).toBe(true);
+    expect(b.startsWith("public-api-")).toBe(true);
+    expect(c.startsWith("public-api-")).toBe(true);
+  });
+
+  it("is deterministic and depends only on the check's own identity", () => {
+    // Same identity → same id, every call. No other check can influence it.
+    expect(checkId("Public API", "https://api.example.org")).toBe(
+      checkId("Public API", "https://api.example.org"),
+    );
+  });
+
+  it("suffixes a 64-bit hash (pins the digest against a narrower regression)", () => {
+    // Pinned value from a 64-bit FNV-1a over "Public API https://api.example.org".
+    // A regression to the old 32-bit digest would change this suffix.
+    expect(checkId("Public API", "https://api.example.org")).toBe(
+      "public-api-3v89g0yt4y0l",
+    );
+  });
+
+  it("falls back to the target slug, then 'check', for an empty job", () => {
+    expect(checkId("", "https://example.org")).toMatch(
+      /^example-org-[a-z0-9]+$/,
+    );
+    expect(checkId("", "")).toMatch(/^check-[a-z0-9]+$/);
   });
 });
 

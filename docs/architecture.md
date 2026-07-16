@@ -47,6 +47,18 @@ already-computed numbers and markup.
   check in Grafana is automatically reflected — there is no service list to
   maintain in this repo. See `listChecks()`.
 
+- **Check ids identify a `(job, target)` pair, not a job name.** Grafana defines
+  a check's identity as job name + target, so two checks can share a job name (or
+  two job names can normalize to the same slug, e.g. `Public API` and
+  `Public-API`). Each check's id is therefore `<job-slug>-<hash>`, where the hash
+  is a stable digest of the full `(job, target)` identity - see `checkId()` in
+  [`lib/format.ts`](../lib/format.ts). Because the hash depends only on the
+  check's own identity, an id never changes when some *other* check is added,
+  removed, or renamed; it only changes if that check's own job or target changes.
+  The readable slug leads so `/site/<id>` URLs stay scannable and sort by service
+  name. Migration note: ids are `slug-hash`, not a bare slug, so any externally
+  saved deep links must be regenerated.
+
 - **Uptime is computed from `probe_all_*` counters.** On Grafana Cloud the raw
   `probe_success` metric is aggregated and can't be queried directly, so uptime
   and current status are derived from the success sum/count counters over the

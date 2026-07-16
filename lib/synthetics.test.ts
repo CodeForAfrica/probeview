@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { checkId } from "./format";
 import { getOverview, getSiteHistory, listChecks } from "./synthetics";
+
+// The public id of the "Site A" fixture used across the overview/history tests.
+const SITE_A_ID = checkId("Site A", "https://a.org");
 
 // Shared mock surface. `prom.instantQuery` / `prom.rangeQuery` are driven
 // per-test via mockImplementation; query strings are matched on the metric
@@ -58,7 +62,7 @@ describe("listChecks", () => {
     expect(prom.instantQuery).toHaveBeenCalledWith("sm_info");
     expect(checks).toEqual([
       {
-        id: "alpha",
+        id: expect.stringMatching(/^alpha-[a-z0-9]+$/),
         name: "Alpha",
         target: "https://a.org",
         job: "Alpha",
@@ -66,7 +70,7 @@ describe("listChecks", () => {
         region: undefined,
       },
       {
-        id: "zebra",
+        id: expect.stringMatching(/^zebra-[a-z0-9]+$/),
         name: "Zebra",
         target: "https://z.org",
         job: "Zebra",
@@ -74,6 +78,31 @@ describe("listChecks", () => {
         region: "NY",
       },
     ]);
+  });
+
+  it("gives every discovered (job, instance) pair a unique, slug-prefixed id", async () => {
+    prom.instantQuery.mockResolvedValue([
+      sample({ job: "Public API", instance: "https://api.example.org" }, "1"),
+      sample({ job: "Public API", instance: "https://api.example.net" }, "1"),
+      sample({ job: "Public-API", instance: "https://api.example.io" }, "1"),
+      sample({ job: "Solo", instance: "https://solo.example.org" }, "1"),
+    ]);
+
+    const checks = await listChecks();
+    const ids = checks.map((c) => c.id);
+
+    expect(checks).toHaveLength(4);
+    expect(new Set(ids).size).toBe(4);
+
+    expect(checks.find((c) => c.job === "Solo")?.id).toMatch(
+      /^solo-[a-z0-9]+$/,
+    );
+
+    const colliding = checks.filter((c) => c.job !== "Solo");
+    expect(colliding).toHaveLength(3);
+    for (const c of colliding) {
+      expect(c.id.startsWith("public-api-")).toBe(true);
+    }
   });
 });
 
@@ -127,7 +156,7 @@ describe("getOverview", () => {
 
     expect(rest).toHaveLength(0);
     expect(site).toMatchObject({
-      id: "site-a",
+      id: SITE_A_ID,
       name: "Site A",
       target: "https://a.org",
       region: "London",
@@ -211,9 +240,9 @@ describe("getSiteHistory", () => {
         ),
     );
 
-    const history = (await getSiteHistory("site-a", "24h"))!;
+    const history = (await getSiteHistory(SITE_A_ID, "24h"))!;
 
-    expect(history.check.id).toBe("site-a");
+    expect(history.check.id).toBe(SITE_A_ID);
     expect(history.window).toBe("24h");
     expect(history.status).toBe("up");
     expect(history.responseMs).toBe(240);
@@ -254,7 +283,7 @@ describe("getSiteHistory", () => {
     });
     prom.rangeQuery.mockResolvedValue([{ metric: {}, values: [[100, "240"]] }]);
 
-    const history = (await getSiteHistory("site-a", "7d"))!;
+    const history = (await getSiteHistory(SITE_A_ID, "7d"))!;
 
     // The plotted line only reaches 240ms, but the summary reports the true
     // fixed-resolution extremes — so it can't shrink on a wider window.
