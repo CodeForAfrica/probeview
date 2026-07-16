@@ -11,6 +11,21 @@ export const WINDOWS: { key: WindowKey; label: string; seconds: number }[] = [
 
 export const WINDOW_KEYS = WINDOWS.map((w) => w.key);
 
+/**
+ * Is a window fully covered by `retentionDays` of retained metrics? A window
+ * longer than what the plan keeps can't be reported honestly. `null`/`undefined`
+ * retention means unlimited, so every window is covered. Pure and dependency-free
+ * so both the server data layer and Client Components can share it.
+ */
+export function windowWithinRetention(
+  window: WindowKey,
+  retentionDays: number | null | undefined,
+): boolean {
+  if (retentionDays == null) return true;
+  const w = WINDOWS.find((x) => x.key === window);
+  return w == null || w.seconds <= retentionDays * 86_400;
+}
+
 /** A single synthetic check (one monitored target). */
 export interface Check {
   id: string;

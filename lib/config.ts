@@ -13,6 +13,12 @@ function env(name: string, fallback = ""): string {
   return process.env[name]?.trim() || fallback;
 }
 
+/** Parse a positive integer day count; anything else (blank, 0, negative, NaN) ⇒ unlimited (null). */
+function parseRetentionDays(raw: string): number | null {
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
 const promUrl = env("GRAFANA_PROM_URL");
 const promUser = env("GRAFANA_PROM_USER");
 const promToken = env("GRAFANA_PROM_TOKEN");
@@ -75,6 +81,15 @@ export const config = {
    * on-demand detail route. Raising it above the ISR interval bounds both.
    */
   metricsCacheSeconds: Number(env("METRICS_CACHE_SECONDS", "60")),
+
+  /**
+   * How many days of metrics your Grafana plan retains. Windows longer than
+   * this can't be reported honestly (the free tier keeps ~14 days), so figures
+   * for them are shown as insufficient (`—`) and their charts are clamped to
+   * the retained span. Unset (or ≤ 0) ⇒ unlimited ⇒ every window is reported
+   * in full, matching the pre-retention behavior. Server-side only.
+   */
+  retentionDays: parseRetentionDays(env("METRICS_RETENTION_DAYS")),
 
   siteName: env("NEXT_PUBLIC_SITE_NAME", "Code for Africa"),
   tagline: env("NEXT_PUBLIC_SITE_TAGLINE", "Status of our public services"),
