@@ -266,3 +266,29 @@ describe("Overview window toggle", () => {
     expect(rowIds()).toEqual(["alpha", "bravo"]);
   });
 });
+
+describe("Overview retention coverage", () => {
+  it("shows a coverage note and opens on the largest covered window", () => {
+    render(
+      <Overview
+        checks={[check({ id: "a", name: "A" })]}
+        updated="now"
+        retentionDays={14}
+      />,
+    );
+    // The note explains the limit...
+    expect(
+      screen.getByText(/Only the last/, { exact: false }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/14 days/)).toBeInTheDocument();
+    // ...and since 30d is beyond retention, the default window falls back to 7d.
+    expect(screen.getByText("7d uptime")).toBeInTheDocument();
+    expect(screen.queryByText("30d uptime")).toBeNull();
+  });
+
+  it("renders no note and opens on 30d when retention is unlimited", () => {
+    render(<Overview checks={[check({ id: "a", name: "A" })]} updated="now" />);
+    expect(screen.queryByText(/Only the last/)).toBeNull();
+    expect(screen.getByText("30d uptime")).toBeInTheDocument();
+  });
+});
