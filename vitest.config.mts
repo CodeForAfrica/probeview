@@ -39,6 +39,10 @@ export default defineConfig({
         test: {
           name: "components",
           environment: "jsdom",
+          // Node's experimental Web Storage global can shadow jsdom's
+          // window.localStorage with `undefined` unless a persistence file is
+          // configured. Component tests should use jsdom's browser storage.
+          execArgv: ["--no-experimental-webstorage"],
           include: ["components/**/*.test.tsx", "app/**/*.test.tsx"],
           setupFiles: ["./test/setup.ts"],
           alias: { "server-only": serverOnly },
