@@ -124,6 +124,39 @@ Accepts any Prometheus duration string (`5m`, `30m`, `1h`, `2h`, …).
 
 ---
 
+## Metrics retention
+
+### `METRICS_RETENTION_DAYS`
+
+- **Default:** unset ⇒ **unlimited**
+- The number of days your Grafana plan retains metrics. On the free Grafana
+  Cloud plan this is ~14 days.
+
+When set, any window longer than the retained span (e.g. `30d` and `1y` on a
+14-day plan) is treated as **not fully covered**:
+
+- Its uptime and response figures are reported as **insufficient** (`—`)
+  everywhere they surface — the overview list, the per-site uptime grid, and the
+  window selector — instead of a confident ratio computed over only the data
+  that happens to exist. The queries for those windows are skipped entirely, so
+  each refresh also makes fewer Prometheus calls.
+- The **selected-window charts** are clamped to the retained span, so the `1y`
+  view shows the ~14 days that actually exist at usable density rather than a
+  near-empty strip.
+- A small **coverage note** explains the limit on both pages.
+
+Leaving it unset preserves the previous behavior exactly — every window is
+queried and reported in full. Set it to match your plan's retention (e.g. `14`)
+so the page never claims a confident `100%` over a window the data can't back.
+
+> This is a **server-side** setting (no `NEXT_PUBLIC_` prefix). Set it to `0`,
+> a negative number, or leave it blank to mean unlimited.
+
+Mock data honors the same variable, so `MOCK=1 METRICS_RETENTION_DAYS=14`
+reproduces the behavior locally without Grafana credentials.
+
+---
+
 ## Metric names
 
 The defaults match the **current** Grafana Synthetic Monitoring schema. Some
