@@ -202,8 +202,11 @@ Design notes:
   so the public page is cheap to serve under load and the `updated` timestamp
   reflects when Grafana was last queried. `METRICS_CACHE_SECONDS` sets **how often
   Grafana is queried**, not the route ISR interval — Next requires the latter to
-  be a static literal, so the overview route uses a fixed `revalidate` and the
-  detail route renders on demand. See
+  be a static literal, so the overview route uses a fixed `revalidate` (60s) and
+  the detail route renders on demand. Because the overview HTML only regenerates
+  on that ISR interval, effective `/` freshness is `max(revalidate,
+  METRICS_CACHE_SECONDS)`; setting the cache below 60s only speeds up the detail
+  route. See
   [`docs/configuration.md`](docs/configuration.md#metrics_cache_seconds).
 
 For a deeper walk-through, see [`docs/architecture.md`](docs/architecture.md).

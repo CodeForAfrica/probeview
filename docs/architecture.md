@@ -19,7 +19,7 @@ lib/synthetics.ts    listChecks → getOverview → getSiteHistory
         │            (discover services, compute uptime/status/latency)
         ▼
 Server Components    app/page.tsx (overview, ISR), app/site/[id]/page.tsx (detail, dynamic)
-        │            data freshness bounded by the cache above, not route rendering
+        │            detail freshness ← cache above; overview ← max(cache, ISR interval)
         ▼
 components/*         presentational UI + hand-rolled SVG charts
 ```
@@ -74,10 +74,14 @@ already-computed numbers and markup.
 
 - **Route rendering is separate from the data cache.** `METRICS_CACHE_SECONDS`
   cannot set a route's ISR interval — Next requires that to be a static literal
-  — so the overview (`/`) uses a fixed `revalidate` literal and the detail route
-  (`/site/[id]`) is rendered on demand because it reads `searchParams`. Either
-  way, both routes read the same cached data, so the effective freshness bound
-  is always `METRICS_CACHE_SECONDS`.
+  — so the overview (`/`) uses a fixed `revalidate` literal (60s) and the detail
+  route (`/site/[id]`) is rendered on demand because it reads `searchParams`.
+  The detail route reads cached data on every request, so its freshness is
+  bounded by `METRICS_CACHE_SECONDS`. The overview page is different: its HTML is
+  only regenerated when the segment revalidates, so effective overview freshness
+  is `max(revalidate, METRICS_CACHE_SECONDS)` — lowering `METRICS_CACHE_SECONDS`
+  below the 60s ISR floor does not make `/` any fresher, it only speeds up the
+  detail route.
 
 - **Secrets stay on the server.** The Grafana credentials have no
   `NEXT_PUBLIC_` prefix, so they are only ever read in Server Components / the

@@ -102,17 +102,25 @@ Accepts any Prometheus duration string (`5m`, `30m`, `1h`, `2h`, …).
   wrappers in `lib/synthetics.ts`). Higher values mean fewer Prometheus queries
   (cheaper, but staler data); lower values mean fresher data at higher query
   cost. `60` is a good balance for most public pages.
-- This is the single knob for **how often Grafana is queried** and therefore how
-  old the overview's `updated` timestamp can be — that value is derived from the
-  actual fetch time, not the page render time.
+- This is the knob for **how often Grafana is queried**. The overview's
+  `updated` timestamp is derived from the actual fetch time (not the page render
+  time), so it always reports the true age of the displayed metrics.
 
 > **What it does _not_ control: the route-revalidation (ISR) interval.** Next.js
 > requires a route's `revalidate` to be a statically-analyzable literal, so it
 > cannot be driven by an environment variable. The overview route (`/`) uses a
-> fixed `revalidate` literal and the detail route (`/site/[id]`) is
-> server-rendered on demand (it reads the `?window=` search param). Both still
-> read cached data, so `METRICS_CACHE_SECONDS` remains the effective bound on
-> data freshness regardless of how often a route re-renders.
+> fixed `revalidate` literal (60s) and the detail route (`/site/[id]`) is
+> server-rendered on demand (it reads the `?window=` search param).
+>
+> This matters for the overview page: its HTML — the metrics **and** the
+> `updated` label — is only regenerated when the segment revalidates, so
+> effective `/` freshness is `max(revalidate, METRICS_CACHE_SECONDS)`. Setting
+> `METRICS_CACHE_SECONDS` **below** the 60s ISR floor does not make `/` query
+> Grafana any fresher — visitors keep the same overview HTML until the route
+> regenerates (and stale-while-revalidate serves the old HTML while regeneration
+> runs in the background). It only speeds up the on-demand detail route. At or
+> above the ISR interval, `METRICS_CACHE_SECONDS` is the effective bound on both
+> routes.
 
 ---
 
