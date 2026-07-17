@@ -1,5 +1,6 @@
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CoverageNote } from "./CoverageNote";
 
@@ -14,6 +15,12 @@ afterEach(() => {
 });
 
 describe("CoverageNote", () => {
+  it("stays hidden in the initial render until storage has been checked", () => {
+    localStorage.setItem(STORAGE_KEY, String(Date.now() + 60_000));
+
+    expect(renderToString(<CoverageNote retentionDays={14} />)).toBe("");
+  });
+
   it("renders nothing when retention is unlimited", () => {
     const { container } = render(<CoverageNote retentionDays={null} />);
     expect(container).toBeEmptyDOMElement();

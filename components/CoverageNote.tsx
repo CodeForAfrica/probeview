@@ -32,7 +32,10 @@ export function CoverageNote({
 }: {
   retentionDays: number | null;
 }) {
-  const [visible, setVisible] = useState(true);
+  // Storage is unavailable during SSR, so stay hidden until the client has
+  // checked whether a remembered dismissal is still active. This prevents a
+  // dismissed notice from flashing during hydration.
+  const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     if (retentionDays == null) return;
@@ -47,6 +50,7 @@ export function CoverageNote({
     } catch {
       // localStorage unavailable (private mode, etc.) — fall through to auto-hide.
     }
+    setVisible(true);
     const timer = setTimeout(() => setVisible(false), AUTO_HIDE_MS);
     return () => clearTimeout(timer);
   }, [retentionDays]);
