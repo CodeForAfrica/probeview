@@ -60,8 +60,21 @@ export const config = {
     degraded: Number(env("UPTIME_DEGRADED", "95")),
   },
 
-  /** Cache window (seconds) for Prometheus responses / page revalidation. */
-  revalidate: Number(env("REVALIDATE_SECONDS", "60")),
+  /**
+   * Metrics-cache window (seconds) for Grafana/Prometheus responses. Governs the
+   * `fetch` cache in lib/prometheus.ts and the `unstable_cache` wrappers in
+   * lib/synthetics.ts — i.e. how often Grafana is actually queried.
+   *
+   * It does NOT set the route-segment ISR interval: Next requires that to be a
+   * statically-analyzable literal, so the overview route uses a fixed
+   * `revalidate` (60s) and the detail route is dynamic. That fixed interval is a
+   * floor on overview freshness: the `/` HTML (data and its `updated` label) is
+   * only regenerated when the segment revalidates, so effective overview
+   * freshness is max(revalidate, metricsCacheSeconds). Lowering this below the
+   * ISR interval makes `/` query Grafana no fresher; it only speeds up the
+   * on-demand detail route. Raising it above the ISR interval bounds both.
+   */
+  metricsCacheSeconds: Number(env("METRICS_CACHE_SECONDS", "60")),
 
   siteName: env("NEXT_PUBLIC_SITE_NAME", "Code for Africa"),
   tagline: env("NEXT_PUBLIC_SITE_TAGLINE", "Status of our public services"),

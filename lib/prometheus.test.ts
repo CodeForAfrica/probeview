@@ -7,7 +7,7 @@ const { mockConfig } = vi.hoisted(() => ({
     promUrl: "https://prom.example.net/api/prom/",
     promUser: "12345",
     promToken: "glc_token",
-    revalidate: 60,
+    metricsCacheSeconds: 60,
   },
 }));
 vi.mock("./config", () => ({ config: mockConfig }));

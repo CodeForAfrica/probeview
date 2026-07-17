@@ -15,8 +15,6 @@ import {
   type WindowKey,
 } from "@/lib/types";
 
-export const revalidate = 60;
-
 function parseWindow(value: string | undefined): WindowKey {
   return (WINDOW_KEYS as string[]).includes(value ?? "")
     ? (value as WindowKey)
