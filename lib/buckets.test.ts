@@ -60,6 +60,28 @@ describe("bucketPlan", () => {
   });
 });
 
+describe("bucketPlan with a retention clamp", () => {
+  const FOURTEEN_DAYS = 14 * 86_400;
+
+  it("shrinks the span to the clamp while keeping the bar count", () => {
+    const full = bucketPlan("1y", now);
+    const clamped = bucketPlan("1y", now, FOURTEEN_DAYS);
+    // Same number of bars, but they now cover only the retained span.
+    expect(clamped.count).toBe(full.count);
+    expect(clamped.endSec - clamped.startSec).toBe(FOURTEEN_DAYS);
+    expect(clamped.stepSec * clamped.count).toBe(FOURTEEN_DAYS);
+    // Denser bars than the unclamped year.
+    expect(clamped.stepSec).toBeLessThan(full.stepSec);
+  });
+
+  it("is a no-op when the window is already within the clamp", () => {
+    // 24h (86400s) is well inside a 14-day clamp.
+    expect(bucketPlan("24h", now, FOURTEEN_DAYS)).toEqual(
+      bucketPlan("24h", now),
+    );
+  });
+});
+
 describe("responsePlan", () => {
   it("matches bucketPlan when the step is already at or below a day", () => {
     // 24h/7d/30d steps (1800s–28800s) never exceed the 1-day cap.
@@ -84,5 +106,14 @@ describe("responsePlan", () => {
     expect(Math.abs(plan.stepSec * plan.count - year)).toBeLessThanOrEqual(
       86_400,
     );
+  });
+
+  it("clamps the 1y span to retention, staying under the daily cap", () => {
+    const FOURTEEN_DAYS = 14 * 86_400;
+    const plan = responsePlan("1y", now, FOURTEEN_DAYS);
+    expect(plan.endSec - plan.startSec).toBe(FOURTEEN_DAYS);
+    // 14d / 90 ≈ 3.7h buckets — already below the 1-day cap, so no re-cap.
+    expect(plan.stepSec).toBeLessThanOrEqual(86_400);
+    expect(plan.count).toBe(bucketPlan("1y", now).count);
   });
 });

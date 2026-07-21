@@ -8,9 +8,26 @@ import {
   type Status,
   WINDOWS,
   type WindowKey,
+  windowWithinRetention,
 } from "@/lib/types";
+import { CoverageNote } from "./CoverageNote";
 import { Search } from "./icons";
 import { StatusBanner } from "./StatusBanner";
+
+/**
+ * Window the overview opens on: the usual `30d`, unless retention doesn't cover
+ * it — then the largest window that *is* covered, so visitors don't land on a
+ * grid of `—`.
+ */
+function defaultWindow(retentionDays: number | null): WindowKey {
+  if (windowWithinRetention("30d", retentionDays)) return "30d";
+  return (
+    [...WINDOWS]
+      .reverse()
+      .find((w) => windowWithinRetention(w.key, retentionDays))?.key ??
+    WINDOWS[0].key
+  );
+}
 
 function overallStatus(checks: CheckStatus[]): Status {
   if (checks.some((c) => c.status === "down")) return "down";
@@ -32,11 +49,16 @@ const SORTS: { key: SortKey; label: string; defaultDir: SortDir }[] = [
 export function Overview({
   checks,
   updated,
+  retentionDays = null,
 }: {
   checks: CheckStatus[];
   updated: string;
+  /** Plan retention in days; `null` (the default) ⇒ unlimited, every window covered. */
+  retentionDays?: number | null;
 }) {
-  const [window, setWindow] = useState<WindowKey>("30d");
+  const [window, setWindow] = useState<WindowKey>(() =>
+    defaultWindow(retentionDays),
+  );
   const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({
     key: "name",
     dir: "asc",
@@ -85,6 +107,8 @@ export function Overview({
         status={overall}
         subtitle={`${operational}/${checks.length} services operational · updated ${updated}`}
       />
+
+      <CoverageNote retentionDays={retentionDays} />
 
       {/* Search — its own row so the sort/window controls below stay uncluttered. */}
       <div className="relative">

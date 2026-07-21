@@ -27,7 +27,11 @@ export default async function Page() {
   return (
     <>
       {config.mock && <MockNotice />}
-      <Overview checks={checks} updated={updated} />
+      <Overview
+        checks={checks}
+        updated={updated}
+        retentionDays={config.retentionDays}
+      />
     </>
   );
 }

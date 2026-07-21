@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { CoverageNote } from "@/components/CoverageNote";
 import { ArrowLeft, ExternalLink } from "@/components/icons";
 import { ErrorPanel } from "@/components/Notice";
 import { ResponseTimeChart } from "@/components/ResponseTimeChart";
@@ -95,6 +96,8 @@ export default async function SitePage({
           <ExternalLink className="h-3.5 w-3.5" />
         </a>
       </header>
+
+      <CoverageNote retentionDays={config.retentionDays} />
 
       {/* Uptime numbers across all windows */}
       <section className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-4">

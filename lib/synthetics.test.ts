@@ -20,6 +20,7 @@ const { mockConfig, mockData, prom, unstableCache } = vi.hoisted(() => ({
     mock: false,
     currentWindow: "1h",
     metricsCacheSeconds: 60,
+    retentionDays: null as number | null,
     thresholds: { operational: 99.9, degraded: 95 },
   },
   mockData: { mockOverview: vi.fn(), mockSiteHistory: vi.fn() },
@@ -48,6 +49,7 @@ const sample = (metric: Record<string, string>, v: string): Sample => ({
 beforeEach(() => {
   vi.clearAllMocks();
   mockConfig.mock = false;
+  mockConfig.retentionDays = null;
 });
 
 describe("listChecks", () => {
@@ -185,6 +187,35 @@ describe("getOverview", () => {
     const { checks } = await getOverview();
     expect(checks[0].status).toBe("unknown");
   });
+
+  it("reports windows beyond retention as insufficient and skips their queries", async () => {
+    mockConfig.retentionDays = 14; // covers 24h + 7d, not 30d/1y
+    wireOverview("100");
+
+    const { checks } = await getOverview();
+    const [site] = checks;
+
+    // Covered windows keep their figures; the rest are null (render as —).
+    expect(site.uptime).toEqual({
+      "24h": 99.95,
+      "7d": 99.95,
+      "30d": null,
+      "1y": null,
+    });
+    expect(site.responseMs).toEqual({
+      "24h": 240,
+      "7d": 240,
+      "30d": null,
+      "1y": null,
+    });
+
+    // The out-of-retention windows were never queried: only the [24h] and [7d]
+    // ranges appear (plus the [1h] current-reachability query and discovery).
+    const ranges = prom.instantQuery.mock.calls.map((c) => c[0] as string);
+    expect(ranges.some((q) => q.includes("[30d]"))).toBe(false);
+    expect(ranges.some((q) => q.includes("[1y]"))).toBe(false);
+    expect(ranges.some((q) => q.includes("[7d]"))).toBe(true);
+  });
 });
 
 describe("getSiteHistory", () => {
@@ -305,6 +336,53 @@ describe("getSiteHistory", () => {
         (q) => q.startsWith("max_over_time") && q.includes("[7d:1h]"),
       ),
     ).toBe(true);
+  });
+
+  it("clamps a beyond-retention window and nulls out-of-retention uptimes", async () => {
+    mockConfig.retentionDays = 14; // 1y is way beyond retention
+    prom.instantQuery.mockImplementation((q: string) => {
+      if (q === "sm_info")
+        return Promise.resolve([
+          sample({ job: "Site A", instance: "https://a.org" }, "1"),
+        ]);
+      if (q.includes("[1h]")) return Promise.resolve([sample({}, "100")]);
+      if (q.includes("DURATION")) return Promise.resolve([sample({}, "240")]);
+      if (q.includes("SUCCESS")) return Promise.resolve([sample({}, "99.9")]);
+      return Promise.resolve([]);
+    });
+    prom.rangeQuery.mockResolvedValue([{ metric: {}, values: [[100, "240"]] }]);
+
+    const history = (await getSiteHistory(SITE_A_ID, "1y"))!;
+
+    // Only the retained windows carry figures; 30d/1y read as insufficient.
+    expect(history.uptime).toEqual({
+      "24h": 99.9,
+      "7d": 99.9,
+      "30d": null,
+      "1y": null,
+    });
+
+    // The uptime strip keeps the 1y bar count but spans only the retained ~14
+    // days (89 steps between the first and last bar), so it stays dense.
+    const RETAINED = 14 * 86_400;
+    const span = history.bars[history.bars.length - 1].t - history.bars[0].t;
+    expect(span).toBeLessThan(RETAINED);
+    expect(span).toBeGreaterThan(
+      RETAINED - (RETAINED / history.bars.length) * 2,
+    );
+
+    const queries = prom.instantQuery.mock.calls.map((c) => c[0] as string);
+    // Summary stats use the clamped retention span, not the raw 1y window.
+    expect(
+      queries.some(
+        (q) => q.startsWith("max_over_time") && q.includes(`[${RETAINED}s:1h]`),
+      ),
+    ).toBe(true);
+    // The out-of-retention per-window uptime queries are skipped.
+    expect(queries.some((q) => q.includes("[30d]"))).toBe(false);
+    expect(
+      queries.some((q) => q.startsWith("100 *") && q.includes("[1y]")),
+    ).toBe(false);
   });
 });
 

@@ -83,6 +83,16 @@ already-computed numbers and markup.
   below the 60s ISR floor does not make `/` any fresher, it only speeds up the
   detail route.
 
+- **Coverage is honest, not optimistic.** A window longer than what the plan
+  retains ([`METRICS_RETENTION_DAYS`](configuration.md#metrics_retention_days))
+  can't be reported truthfully, so the data layer skips its query and marks it
+  insufficient (`—`) rather than computing a confident ratio over a partial
+  range; the selected-window charts are clamped to the retained span. The window
+  itself stays visible — coverage is disclosed, not hidden. Retention is
+  resolved server-side and passed to Client Components as a plain `retentionDays`
+  prop (see `windowWithinRetention` in [`lib/types.ts`](../lib/types.ts)); the
+  env var stays server-only. Unset ⇒ unlimited ⇒ unchanged behavior.
+
 - **Secrets stay on the server.** The Grafana credentials have no
   `NEXT_PUBLIC_` prefix, so they are only ever read in Server Components / the
   data layer and never reach the browser bundle.

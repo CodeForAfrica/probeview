@@ -17,6 +17,7 @@ import {
   WINDOW_KEYS,
   WINDOWS,
   type WindowKey,
+  windowWithinRetention,
 } from "./types";
 
 const M = config.metrics;
@@ -26,6 +27,18 @@ const STAT_RES = "1h";
 /** Current time as unix seconds — stamped as the data's fetch time. */
 function nowSeconds(): number {
   return Math.floor(Date.now() / 1000);
+}
+
+/** Retained span in seconds, or null when retention is unlimited. */
+function retentionSec(): number | null {
+  return config.retentionDays != null ? config.retentionDays * 86_400 : null;
+}
+
+/** Windows fully covered by the plan's retention — the only ones worth querying. */
+function coveredWindows() {
+  return WINDOWS.filter((w) =>
+    windowWithinRetention(w.key, config.retentionDays),
+  );
 }
 
 /** PromQL range-vector duration for a window (e.g. "7d"). */
@@ -96,26 +109,34 @@ function toKeyedNumbers(
 async function fetchOverview(): Promise<OverviewData> {
   const checks = await listChecks();
 
+  // Only query windows within retention; longer windows can't be reported
+  // honestly, so we skip their queries entirely (fewer Grafana calls) and mark
+  // them insufficient below.
+  const covered = coveredWindows();
   const results = await Promise.all([
     instantQuery(uptimeExpr(config.currentWindow)), // [0] current reachability
-    ...WINDOWS.map((w) => instantQuery(uptimeExpr(promRange(w.key)))), // [1..n] uptime per window
-    ...WINDOWS.map((w) => instantQuery(responseExpr(promRange(w.key)))), // [n+1..] response per window
+    ...covered.map((w) => instantQuery(uptimeExpr(promRange(w.key)))),
+    ...covered.map((w) => instantQuery(responseExpr(promRange(w.key)))),
   ]);
 
   const currentMap = toKeyedNumbers(results[0]);
-  const uptimeMaps = WINDOWS.map((_, i) => toKeyedNumbers(results[1 + i]));
-  const respMaps = WINDOWS.map((_, i) =>
-    toKeyedNumbers(results[1 + WINDOWS.length + i]),
-  );
+  const uptimeByWindow = new Map<WindowKey, Map<string, number>>();
+  const respByWindow = new Map<WindowKey, Map<string, number>>();
+  covered.forEach((w, i) => {
+    uptimeByWindow.set(w.key, toKeyedNumbers(results[1 + i]));
+    respByWindow.set(w.key, toKeyedNumbers(results[1 + covered.length + i]));
+  });
 
   const statuses = checks.map((c) => {
     const k = checkIdentity(c.job, c.instance);
     const uptime = {} as MetricByWindow;
     const responseMs = {} as MetricByWindow;
-    WINDOWS.forEach((w, i) => {
-      const u = uptimeMaps[i].get(k);
+    WINDOWS.forEach((w) => {
+      // Windows beyond retention were never queried: report `null` (renders
+      // `—`) rather than a misleading ratio over a partial range.
+      const u = uptimeByWindow.get(w.key)?.get(k);
       uptime[w.key] = u == null ? null : Number(u.toFixed(3));
-      const r = respMaps[i].get(k);
+      const r = respByWindow.get(w.key)?.get(k);
       responseMs[w.key] = r == null ? null : Math.round(r);
     });
     // Current reachability over a short window: 0 = down, >0 = up, absent = unknown.
@@ -164,10 +185,14 @@ async function fetchSiteHistory(
   if (!check) return null;
 
   const sel = matcher(check);
+  const retention = retentionSec();
+  const covered = coveredWindows();
   // The bars use a fixed bar count; the response line caps its step at a day so
   // long windows (1y) still resolve recent history instead of a few wide buckets.
-  const barPlan = bucketPlan(window);
-  const respPlan = responsePlan(window);
+  // When the selected window exceeds retention, clamp the span so the charts
+  // show the retained data at usable density instead of a near-empty strip.
+  const barPlan = bucketPlan(window, undefined, retention ?? undefined);
+  const respPlan = responsePlan(window, undefined, retention ?? undefined);
   const barStep = `${barPlan.stepSec}s`;
   const respStep = `${respPlan.stepSec}s`;
 
@@ -180,10 +205,17 @@ async function fetchSiteHistory(
 
   // Summary stats are computed over a fixed-resolution series (STAT_RES), not
   // the variable per-window buckets, so they stay comparable across windows.
+  // The sub-query range is clamped to retention so the stats describe the same
+  // span the clamped chart shows.
+  const statSpanSec = WINDOWS.find((w) => w.key === window)?.seconds ?? 0;
+  const statRangeStr =
+    retention != null && statSpanSec > retention
+      ? `${retention}s`
+      : promRange(window);
   const statSeries =
     `1000 * sum(rate(${M.durationSum}${sel}[${STAT_RES}]))` +
     ` / sum(rate(${M.durationCount}${sel}[${STAT_RES}]))`;
-  const statRange = `(${statSeries})[${promRange(window)}:${STAT_RES}]`;
+  const statRange = `(${statSeries})[${statRangeStr}:${STAT_RES}]`;
 
   const [
     currentSamples,
@@ -207,7 +239,8 @@ async function fetchSiteHistory(
     instantQuery(`min_over_time(${statRange})`),
     instantQuery(`avg_over_time(${statRange})`),
     instantQuery(`max_over_time(${statRange})`),
-    ...WINDOWS.map((w) =>
+    // Only windows within retention are queried; the rest stay insufficient.
+    ...covered.map((w) =>
       instantQuery(
         `100 * sum(rate(${M.successSum}${sel}[${promRange(w.key)}]))` +
           ` / sum(rate(${M.successCount}${sel}[${promRange(w.key)}]))`,
@@ -216,9 +249,10 @@ async function fetchSiteHistory(
   ]);
 
   const uptime = {} as UptimeByWindow;
-  WINDOW_KEYS.forEach((wk, i) => {
+  for (const wk of WINDOW_KEYS) uptime[wk] = null;
+  covered.forEach((w, i) => {
     const v = Number(uptimeSamples[i][0]?.value[1]);
-    uptime[wk] = Number.isFinite(v) ? Number(v.toFixed(3)) : null;
+    uptime[w.key] = Number.isFinite(v) ? Number(v.toFixed(3)) : null;
   });
 
   // Render the full window as a fixed grid: color the buckets Prometheus

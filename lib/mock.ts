@@ -4,6 +4,7 @@
  * in transparently once env is set — see lib/synthetics.ts.
  */
 import { bucketPlan } from "./buckets";
+import { config } from "./config";
 import { checkId, checkIdentity, deriveStatus, fnv1a } from "./format";
 import {
   type CheckStatus,
@@ -14,7 +15,13 @@ import {
   type UptimeByWindow,
   WINDOW_KEYS,
   type WindowKey,
+  windowWithinRetention,
 } from "./types";
+
+/** Retained span in seconds, or null when retention is unlimited. */
+function retentionSec(): number | null {
+  return config.retentionDays != null ? config.retentionDays * 86_400 : null;
+}
 
 interface MockSite {
   name: string;
@@ -122,12 +129,18 @@ function uptimeByWindow(site: MockSite): UptimeByWindow {
   const r = rng(fnv1a(seedFor(site)));
   const out = {} as UptimeByWindow;
   for (const key of WINDOW_KEYS) {
+    // Windows beyond retention can't be reported honestly — mirror live mode
+    // and mark them insufficient. Still advance the RNG so covered windows keep
+    // their stable values regardless of the retention setting.
     // Shorter windows wobble a little more around the baseline.
     const spread = key === "24h" ? 0.4 : key === "7d" ? 0.25 : 0.12;
     const v = site.baseUptime + (r() - 0.5) * spread;
-    out[key] = Math.min(100, Math.max(80, Number(v.toFixed(3))));
+    out[key] = windowWithinRetention(key, config.retentionDays)
+      ? Math.min(100, Math.max(80, Number(v.toFixed(3))))
+      : null;
   }
-  if (!site.currentlyUp) out["24h"] = Math.min(out["24h"] ?? 100, 91 + r() * 3);
+  if (!site.currentlyUp && out["24h"] != null)
+    out["24h"] = Math.min(out["24h"], 91 + r() * 3);
   return out;
 }
 
@@ -135,13 +148,13 @@ function responseByWindow(site: MockSite): MetricByWindow {
   const r = rng(fnv1a(`${seedFor(site)}:resp`));
   const out = {} as MetricByWindow;
   for (const key of WINDOW_KEYS) {
-    if (!site.currentlyUp) {
-      out[key] = null;
-      continue;
-    }
-    // Slightly different averages per window so the toggle visibly changes them.
+    // Advance the RNG for every window so covered figures stay stable, then null
+    // out down services and windows beyond retention.
     const v = site.baseMs * (0.85 + r() * 0.3);
-    out[key] = Math.round(v);
+    out[key] =
+      !site.currentlyUp || !windowWithinRetention(key, config.retentionDays)
+        ? null
+        : Math.round(v);
   }
   return out;
 }
@@ -170,7 +183,7 @@ export function mockSiteHistory(
   const site = MOCK_SITES.find((s) => idFor(s) === id);
   if (!site) return null;
 
-  const plan = bucketPlan(window);
+  const plan = bucketPlan(window, undefined, retentionSec() ?? undefined);
   const uptime = uptimeByWindow(site);
   const r = rng(fnv1a(`${seedFor(site)}:${window}`));
 

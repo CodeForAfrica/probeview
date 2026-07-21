@@ -27,10 +27,23 @@ export interface BucketPlan {
   endSec: number;
 }
 
-/** Decide how many buckets / what step a window's history strip uses. */
-export function bucketPlan(window: WindowKey, now = Date.now()): BucketPlan {
-  const seconds =
+/**
+ * Decide how many buckets / what step a window's history strip uses.
+ *
+ * `maxSpanSec` clamps the span so a window longer than what the plan retains
+ * (e.g. `1y` on a 14-day plan) shows the retained data at usable density rather
+ * than a near-empty strip: the bar count is unchanged, so each bar just gets
+ * narrower. Omit it (or pass a span ≥ the window) for the full window.
+ */
+export function bucketPlan(
+  window: WindowKey,
+  now = Date.now(),
+  maxSpanSec?: number,
+): BucketPlan {
+  const windowSeconds =
     WINDOWS.find((w) => w.key === window)?.seconds ?? WINDOWS[0].seconds;
+  const seconds =
+    maxSpanSec != null ? Math.min(windowSeconds, maxSpanSec) : windowSeconds;
   const count = BAR_COUNT[window];
   const stepSec = Math.max(MIN_STEP_SECONDS, Math.round(seconds / count));
   const endSec = Math.floor(now / 1000);
@@ -44,8 +57,12 @@ export function bucketPlan(window: WindowKey, now = Date.now()): BucketPlan {
  * collapsing to a few far-apart points. Independent of the uptime strip, which
  * keeps its fixed (coarser) bar count.
  */
-export function responsePlan(window: WindowKey, now = Date.now()): BucketPlan {
-  const base = bucketPlan(window, now);
+export function responsePlan(
+  window: WindowKey,
+  now = Date.now(),
+  maxSpanSec?: number,
+): BucketPlan {
+  const base = bucketPlan(window, now, maxSpanSec);
   if (base.stepSec <= MAX_RESPONSE_STEP_SECONDS) return base;
   const stepSec = MAX_RESPONSE_STEP_SECONDS;
   const count = Math.round((base.stepSec * base.count) / stepSec);
