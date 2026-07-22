@@ -32,9 +32,20 @@ interface MockSite {
   /** Baseline response time, ms. */
   baseMs: number;
   currentlyUp: boolean;
+  /** Group display name (as if read from a Grafana custom label). Omit ⇒ ungrouped. */
+  group?: string;
+  /** Compact secondary role within the group (e.g. Web, API). */
+  purpose?: string;
 }
 
+// A representative mix: two named groups (one with a partially-affected member
+// so the overview's "1 of N affected" summary is exercised), several ungrouped
+// services that land in the "Other services" fallback, and the colliding
+// job-slug pair that guards (job, instance) id disambiguation.
 const MOCK_SITES: MockSite[] = [
+  // Group: PesaCheck — a product family with front-end, API, and admin surfaces.
+  // Its admin endpoint is down, so the group shows "1 of 3 affected" while its
+  // other members stay operational — the whole group must not read as "Down".
   {
     name: "PesaCheck",
     target: "https://pesacheck.org",
@@ -42,7 +53,51 @@ const MOCK_SITES: MockSite[] = [
     baseUptime: 99.98,
     baseMs: 240,
     currentlyUp: true,
+    group: "PesaCheck",
+    purpose: "Web",
   },
+  {
+    name: "PesaCheck API",
+    target: "https://api.pesacheck.org",
+    region: "Frankfurt",
+    baseUptime: 99.95,
+    baseMs: 180,
+    currentlyUp: true,
+    group: "PesaCheck",
+    purpose: "API",
+  },
+  {
+    name: "PesaCheck Admin",
+    target: "https://admin.pesacheck.org",
+    region: "Frankfurt",
+    baseUptime: 96.5,
+    baseMs: 640,
+    currentlyUp: false,
+    group: "PesaCheck",
+    purpose: "Admin",
+  },
+  // Group: sensors.AFRICA — two members, all operational ("All 2 operational").
+  {
+    name: "sensors.AFRICA",
+    target: "https://sensors.africa",
+    region: "London",
+    baseUptime: 99.7,
+    baseMs: 420,
+    currentlyUp: true,
+    group: "sensors.AFRICA",
+    purpose: "Web",
+  },
+  {
+    name: "sensors.AFRICA API",
+    target: "https://api.sensors.africa",
+    region: "London",
+    baseUptime: 99.6,
+    baseMs: 300,
+    currentlyUp: true,
+    group: "sensors.AFRICA",
+    purpose: "API",
+  },
+  // Ungrouped services — no custom label, so they gather under "Other services".
   {
     name: "Code for Africa",
     target: "https://codeforafrica.org",
@@ -52,28 +107,12 @@ const MOCK_SITES: MockSite[] = [
     currentlyUp: true,
   },
   {
-    name: "sensors.AFRICA",
-    target: "https://sensors.africa",
-    region: "London",
-    baseUptime: 99.7,
-    baseMs: 420,
-    currentlyUp: true,
-  },
-  {
     name: "Academy",
     target: "https://academy.africa",
     region: "Frankfurt",
     baseUptime: 98.6,
     baseMs: 530,
     currentlyUp: true,
-  },
-  {
-    name: "africanDRONE",
-    target: "https://africandrone.org",
-    region: "London",
-    baseUptime: 93.2,
-    baseMs: 870,
-    currentlyUp: false,
   },
   {
     name: "The Continent",
@@ -169,6 +208,8 @@ export function mockOverview(): CheckStatus[] {
       job: site.name,
       instance: site.target,
       region: site.region,
+      group: site.group,
+      purpose: site.purpose,
       status: deriveStatus(site.currentlyUp, uptime["24h"]),
       uptime,
       responseMs: responseByWindow(site),
@@ -226,6 +267,8 @@ export function mockSiteHistory(
       job: site.name,
       instance: site.target,
       region: site.region,
+      group: site.group,
+      purpose: site.purpose,
     },
     status: deriveStatus(site.currentlyUp, uptime["24h"]),
     uptime,

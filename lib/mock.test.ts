@@ -8,10 +8,24 @@ const idOf = (name: string): string =>
 describe("mockOverview", () => {
   it("returns every fixture site", () => {
     const sites = mockOverview();
-    expect(sites).toHaveLength(8);
+    expect(sites).toHaveLength(10);
     // Every id is the readable slug plus a stable hash suffix.
     expect(sites.some((s) => s.id.startsWith("pesacheck-"))).toBe(true);
-    expect(sites.some((s) => s.id.startsWith("africandrone-"))).toBe(true);
+    expect(sites.some((s) => s.id.startsWith("the-continent-"))).toBe(true);
+  });
+
+  it("includes grouped, partially-affected, and ungrouped fixtures", () => {
+    const sites = mockOverview();
+    // A named group whose members share a group label...
+    const pesacheck = sites.filter((s) => s.group === "PesaCheck");
+    expect(pesacheck.length).toBeGreaterThan(1);
+    // ...with distinct purposes and exactly one affected member.
+    expect(pesacheck.map((s) => s.purpose)).toEqual(
+      expect.arrayContaining(["Web", "API", "Admin"]),
+    );
+    expect(pesacheck.filter((s) => s.status !== "up")).toHaveLength(1);
+    // ...and ungrouped fixtures that carry no group label at all.
+    expect(sites.some((s) => s.group == null)).toBe(true);
   });
 
   it("gives every fixture a unique id, even when job slugs collide", () => {
@@ -54,10 +68,10 @@ describe("mockOverview", () => {
   });
 
   it("marks a down fixture down with null response times", () => {
-    const drone = mockOverview().find((s) => s.name === "africanDRONE")!;
-    expect(drone.status).toBe("down");
+    const admin = mockOverview().find((s) => s.name === "PesaCheck Admin")!;
+    expect(admin.status).toBe("down");
     for (const key of WINDOW_KEYS) {
-      expect(drone.responseMs[key]).toBeNull();
+      expect(admin.responseMs[key]).toBeNull();
     }
   });
 
@@ -105,7 +119,7 @@ describe("mockSiteHistory", () => {
   });
 
   it("models a current incident on a down site", () => {
-    const h = mockSiteHistory(idOf("africanDRONE"), "24h")!;
+    const h = mockSiteHistory(idOf("PesaCheck Admin"), "24h")!;
     expect(h.status).toBe("down");
     expect(h.responseMs).toBeNull();
     // The last two buckets represent the ongoing outage: each is heavily
