@@ -1,9 +1,10 @@
 import { expect, type Page, test } from "@playwright/test";
 
 // Detail page assertions against the deterministic MOCK fixtures (lib/mock.ts):
-// "PesaCheck" is operational, "africanDRONE" is down. Public ids carry a hash
-// suffix, so resolve each detail URL from its overview link rather than
-// hardcoding it.
+// "The Continent" is operational, "PesaCheck Admin" is down. Public ids carry a
+// hash suffix, so resolve each detail URL from its overview link rather than
+// hardcoding it. Rows are matched by their unique target host, since several
+// PesaCheck checks share a display name.
 async function gotoSite(page: Page, linkName: RegExp): Promise<void> {
   await page.goto("/");
   const href = await page
@@ -15,16 +16,16 @@ async function gotoSite(page: Page, linkName: RegExp): Promise<void> {
 
 test.describe("site detail page", () => {
   test("renders an operational service's details", async ({ page }) => {
-    await gotoSite(page, /PesaCheck/);
+    await gotoSite(page, /thecontinent\.org/);
 
     await expect(
-      page.getByRole("heading", { name: "PesaCheck" }),
+      page.getByRole("heading", { name: "The Continent" }),
     ).toBeVisible();
     await expect(page.getByText("Operational")).toBeVisible();
 
     // External link to the probed target, protocol stripped in the label.
-    const target = page.getByRole("link", { name: /pesacheck\.org/ });
-    await expect(target).toHaveAttribute("href", "https://pesacheck.org");
+    const target = page.getByRole("link", { name: /thecontinent\.org/ });
+    await expect(target).toHaveAttribute("href", "https://thecontinent.org");
     await expect(target).toHaveAttribute("target", "_blank");
 
     // The uptime grid covers every window.
@@ -54,9 +55,9 @@ test.describe("site detail page", () => {
   test("marks a down service as down with no current response time", async ({
     page,
   }) => {
-    await gotoSite(page, /africanDRONE/);
+    await gotoSite(page, /admin\.pesacheck\.org/);
     await expect(
-      page.getByRole("heading", { name: "africanDRONE" }),
+      page.getByRole("heading", { name: "PesaCheck Admin" }),
     ).toBeVisible();
     await expect(page.getByText("Down")).toBeVisible();
     // responseMs is null for a down service → formatted as an em dash.
@@ -64,11 +65,13 @@ test.describe("site detail page", () => {
   });
 
   test("switches the window via the tab links", async ({ page }) => {
-    await gotoSite(page, /PesaCheck/);
+    await gotoSite(page, /thecontinent\.org/);
     await page.getByRole("link", { name: "30d", exact: true }).click();
-    await expect(page).toHaveURL(/\/site\/pesacheck-[a-z0-9]+\?window=30d$/);
+    await expect(page).toHaveURL(
+      /\/site\/the-continent-[a-z0-9]+\?window=30d$/,
+    );
     await expect(
-      page.getByRole("heading", { name: "PesaCheck" }),
+      page.getByRole("heading", { name: "The Continent" }),
     ).toBeVisible();
   });
 
