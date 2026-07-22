@@ -30,11 +30,12 @@ export function windowWithinRetention(
 export interface Check {
   id: string;
   name: string;
-  /** The probed target, e.g. https://example.org */
   target: string;
   job: string;
   instance: string;
   region?: string;
+  group?: string;
+  purpose?: string;
 }
 
 /** A numeric metric keyed by time window (uptime % or avg response ms). */
