@@ -267,6 +267,127 @@ describe("Overview window toggle", () => {
   });
 });
 
+describe("Overview grouping", () => {
+  // A PesaCheck group (Web up, API up, Admin down), a sensors group (all up),
+  // and an ungrouped service that must land under "Other services".
+  // Member names deliberately avoid the group word so search-by-group-name is
+  // exercised independently of search-by-check-name.
+  const grouped = [
+    check({
+      id: "pc-web",
+      name: "Marketing",
+      group: "PesaCheck",
+      purpose: "Web",
+    }),
+    check({
+      id: "pc-api",
+      name: "Public data",
+      group: "PesaCheck",
+      purpose: "API",
+    }),
+    check({
+      id: "pc-admin",
+      name: "Console",
+      group: "PesaCheck",
+      purpose: "Admin",
+      status: "down",
+    }),
+    check({
+      id: "sa-web",
+      name: "Dashboard",
+      group: "sensors.AFRICA",
+      purpose: "Web",
+    }),
+    check({ id: "solo", name: "Solo Service" }),
+  ];
+
+  function headings(): string[] {
+    return screen
+      .getAllByRole("heading", { level: 3 })
+      .map((h) => h.textContent ?? "");
+  }
+
+  it("renders one section per group plus an 'Other services' fallback, ordered stably", () => {
+    render(<Overview checks={grouped} updated="now" />);
+    // Named groups alphabetical; the fallback always last.
+    expect(headings()).toEqual([
+      "PesaCheck",
+      "sensors.AFRICA",
+      "Other services",
+    ]);
+  });
+
+  it("summarises impact without relabelling a partially-affected group as down", () => {
+    render(<Overview checks={grouped} updated="now" />);
+    // One of three PesaCheck members is down...
+    expect(screen.getByText("1 of 3 affected")).toBeInTheDocument();
+    // ...the healthy groups report all-operational (sensors.AFRICA + Other)...
+    expect(screen.getAllByText("All 1 operational")).toHaveLength(2);
+    // ...and the group is never flattened to a bare "Down" label.
+    expect(screen.queryByText("Down")).toBeNull();
+  });
+
+  it("summarises a group with missing data as unavailable", () => {
+    render(
+      <Overview
+        checks={[
+          check({ id: "a", name: "A", group: "G", status: "unknown" }),
+          check({ id: "b", name: "B", group: "G" }),
+        ]}
+        updated="now"
+      />,
+    );
+    expect(
+      screen.getByText("Status unavailable for 1 of 2"),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps each grouped check independently linked to its detail page", () => {
+    render(<Overview checks={grouped} updated="now" />);
+    expect(rowIds()).toContain("pc-admin");
+    expect(rowIds()).toContain("solo");
+    expect(rowIds()).toHaveLength(grouped.length);
+  });
+
+  it("renders the purpose as compact secondary metadata on the row", () => {
+    render(<Overview checks={grouped} updated="now" />);
+    expect(screen.getByText("Admin")).toBeInTheDocument();
+    expect(screen.getByText("API")).toBeInTheDocument();
+  });
+
+  it("shows the whole group when the group name matches the query", async () => {
+    const user = userEvent.setup();
+    render(<Overview checks={grouped} updated="now" />);
+    await user.type(screen.getByRole("searchbox"), "pesacheck");
+    // All three PesaCheck members show even though none contains "pesacheck"
+    // beyond the shared group name.
+    expect(rowIds()).toEqual(
+      expect.arrayContaining(["pc-web", "pc-api", "pc-admin"]),
+    );
+    expect(rowIds()).toHaveLength(3);
+    expect(headings()).toEqual(["PesaCheck"]);
+  });
+
+  it("filters to matching children (by purpose) under their group heading", async () => {
+    const user = userEvent.setup();
+    render(<Overview checks={grouped} updated="now" />);
+    await user.type(screen.getByRole("searchbox"), "admin");
+    expect(rowIds()).toEqual(["pc-admin"]);
+    expect(headings()).toEqual(["PesaCheck"]);
+  });
+
+  it("falls back to the flat list when no check carries a group", () => {
+    render(
+      <Overview
+        checks={[check({ id: "a", name: "A" }), check({ id: "b", name: "B" })]}
+        updated="now"
+      />,
+    );
+    expect(screen.queryAllByRole("heading", { level: 3 })).toHaveLength(0);
+    expect(rowIds()).toEqual(["a", "b"]);
+  });
+});
+
 describe("Overview retention coverage", () => {
   it("shows a coverage note and opens on the largest covered window", () => {
     render(
