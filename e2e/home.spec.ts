@@ -41,6 +41,33 @@ test.describe("home page", () => {
     await expect(page.getByText("1 of 3 affected")).toBeVisible();
   });
 
+  test("collapses a group and remembers it after a reload", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const toggle = page.getByRole("button", { name: /PesaCheck/ });
+    const memberRow = page.getByRole("link", { name: /admin\.pesacheck\.org/ });
+
+    // Expanded by default.
+    await expect(toggle).toHaveAttribute("aria-expanded", "true");
+    await expect(memberRow).toBeVisible();
+
+    // Collapsing hides the rows but keeps the impact summary in the header.
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await expect(memberRow).toBeHidden();
+    await expect(page.getByText("1 of 3 affected")).toBeVisible();
+
+    // The collapsed state survives a reload (persisted in localStorage).
+    await page.reload();
+    await expect(
+      page.getByRole("button", { name: /PesaCheck/ }),
+    ).toHaveAttribute("aria-expanded", "false");
+    await expect(
+      page.getByRole("link", { name: /admin\.pesacheck\.org/ }),
+    ).toBeHidden();
+  });
+
   test("links each service to its detail page", async ({ page }) => {
     await page.goto("/");
     // Ids are the readable slug plus a stable hash suffix. Match rows by their

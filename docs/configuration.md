@@ -214,9 +214,13 @@ renders under a **PesaCheck** section, with a small **API** chip on its row.
   summary — `All 3 operational`, `1 of 3 affected`, or `Status unavailable for
   1 of 3` — so a single failing endpoint never mislabels the whole group as
   down. Every check stays independently clickable with its own history.
-- Groups stay **expanded** (never collapsed), in a stable order (named groups
-  alphabetical, `Other services` last); the selected sort applies within each
-  group. Search matches the group name, check name, target URL, and purpose.
+- Groups are **collapsible** — expanded by default, with a chevron indicating
+  state. A collapsed group keeps its status dot and impact summary visible, so a
+  failing endpoint is never hidden. Each visitor's collapsed groups are
+  remembered across visits (in `localStorage`, client-side only). Group order is
+  stable (named groups alphabetical, `Other services` last) and the selected
+  sort applies within each group. Search matches the group name, check name,
+  target URL, and purpose, and always expands groups with matches.
 - Checks with **no value** for the group label gather under a clearly named
   **`Other services`** section. When **no** check carries the label at all, the
   overview keeps its original flat list — this feature is purely additive.

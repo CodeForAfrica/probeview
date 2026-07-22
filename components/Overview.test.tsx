@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import type { CheckStatus, Status, WindowKey } from "@/lib/types";
 import { Overview } from "./Overview";
 
@@ -301,16 +301,21 @@ describe("Overview grouping", () => {
     check({ id: "solo", name: "Solo Service" }),
   ];
 
-  function headings(): string[] {
-    return screen
-      .getAllByRole("heading", { level: 3 })
-      .map((h) => h.textContent ?? "");
+  // Group section headings, in DOM order. Each collapse toggle carries its
+  // group name as a data attribute, independent of the visible summary text.
+  function groupNames(): string[] {
+    return Array.from(document.querySelectorAll("[data-group]")).map(
+      (el) => el.getAttribute("data-group") ?? "",
+    );
   }
+
+  // Persisted collapse state would otherwise leak between tests.
+  beforeEach(() => localStorage.clear());
 
   it("renders one section per group plus an 'Other services' fallback, ordered stably", () => {
     render(<Overview checks={grouped} updated="now" />);
     // Named groups alphabetical; the fallback always last.
-    expect(headings()).toEqual([
+    expect(groupNames()).toEqual([
       "PesaCheck",
       "sensors.AFRICA",
       "Other services",
@@ -365,7 +370,7 @@ describe("Overview grouping", () => {
       expect.arrayContaining(["pc-web", "pc-api", "pc-admin"]),
     );
     expect(rowIds()).toHaveLength(3);
-    expect(headings()).toEqual(["PesaCheck"]);
+    expect(groupNames()).toEqual(["PesaCheck"]);
   });
 
   it("filters to matching children (by purpose) under their group heading", async () => {
@@ -373,7 +378,7 @@ describe("Overview grouping", () => {
     render(<Overview checks={grouped} updated="now" />);
     await user.type(screen.getByRole("searchbox"), "admin");
     expect(rowIds()).toEqual(["pc-admin"]);
-    expect(headings()).toEqual(["PesaCheck"]);
+    expect(groupNames()).toEqual(["PesaCheck"]);
   });
 
   it("falls back to the flat list when no check carries a group", () => {
@@ -385,6 +390,54 @@ describe("Overview grouping", () => {
     );
     expect(screen.queryAllByRole("heading", { level: 3 })).toHaveLength(0);
     expect(rowIds()).toEqual(["a", "b"]);
+  });
+
+  it("starts expanded and collapses a group while keeping its impact summary visible", async () => {
+    const user = userEvent.setup();
+    render(<Overview checks={grouped} updated="now" />);
+
+    const toggle = screen.getByRole("button", { name: /PesaCheck/ });
+    // Expanded by default: every member row is present.
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(rowIds()).toContain("pc-admin");
+
+    await user.click(toggle);
+    // Collapsed: rows are removed from the tree...
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(rowIds()).not.toContain("pc-admin");
+    expect(rowIds()).not.toContain("pc-web");
+    // ...but the affected count stays visible in the header, never hidden.
+    expect(screen.getByText("1 of 3 affected")).toBeInTheDocument();
+
+    await user.click(toggle);
+    expect(rowIds()).toContain("pc-admin");
+  });
+
+  it("remembers collapsed groups across visits", async () => {
+    const user = userEvent.setup();
+    const { unmount } = render(<Overview checks={grouped} updated="now" />);
+    await user.click(screen.getByRole("button", { name: /PesaCheck/ }));
+    expect(rowIds()).not.toContain("pc-admin");
+    unmount();
+
+    // A fresh mount hydrates the persisted state from localStorage.
+    render(<Overview checks={grouped} updated="now" />);
+    expect(screen.getByRole("button", { name: /PesaCheck/ })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    expect(rowIds()).not.toContain("pc-admin");
+  });
+
+  it("force-expands a collapsed group when a search matches it", async () => {
+    const user = userEvent.setup();
+    render(<Overview checks={grouped} updated="now" />);
+    await user.click(screen.getByRole("button", { name: /PesaCheck/ }));
+    expect(rowIds()).not.toContain("pc-admin");
+
+    // Searching must never hide matches behind a collapsed section.
+    await user.type(screen.getByRole("searchbox"), "pesacheck");
+    expect(rowIds()).toContain("pc-admin");
   });
 });
 

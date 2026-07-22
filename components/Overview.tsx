@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { fmtMs, fmtPct, STATUS_META } from "@/lib/format";
 import {
   type CheckStatus,
@@ -11,11 +11,23 @@ import {
   windowWithinRetention,
 } from "@/lib/types";
 import { CoverageNote } from "./CoverageNote";
-import { Search } from "./icons";
+import { Chevron, Search } from "./icons";
 import { StatusBanner } from "./StatusBanner";
 
 /** Fallback section for checks that carry no group label. */
 const OTHER_GROUP = "Other services";
+
+/** localStorage key holding the names of groups the visitor has collapsed. */
+const COLLAPSE_KEY = "probeview:collapsed-groups";
+
+/** DOM id of the pre-paint boot <style> injected by app/layout.tsx. */
+const BOOT_STYLE_ID = "group-collapse-boot";
+
+// Apply persisted collapse state before the browser paints so client-side
+// navigations don't flash groups open. On the server this is a no-op effect
+// (layout effects never run there); the boot <style> covers the initial load.
+const useBrowserLayoutEffect =
+  typeof document !== "undefined" ? useLayoutEffect : useEffect;
 
 /**
  * Window the overview opens on: the usual `30d`, unless retention doesn't cover
@@ -141,6 +153,44 @@ export function Overview({
     dir: "asc",
   });
   const [query, setQuery] = useState("");
+  // Names of collapsed groups. Starts empty (every group expanded) so the first
+  // client render matches the server HTML; the persisted state is applied in a
+  // layout effect below, before paint. The boot <style> in app/layout.tsx hides
+  // collapsed groups for the initial server-rendered paint that precedes it.
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
+  const [hydrated, setHydrated] = useState(false);
+
+  useBrowserLayoutEffect(() => {
+    try {
+      const raw = localStorage.getItem(COLLAPSE_KEY);
+      const parsed: unknown = raw ? JSON.parse(raw) : null;
+      if (Array.isArray(parsed))
+        setCollapsed(new Set(parsed.filter((n) => typeof n === "string")));
+    } catch {
+      // localStorage unavailable or malformed — keep every group expanded.
+    }
+    setHydrated(true);
+  }, []);
+
+  // Once React owns the collapse state, drop the boot <style> so groups the
+  // visitor expands this session are no longer force-hidden by it.
+  useEffect(() => {
+    if (hydrated) document.getElementById(BOOT_STYLE_ID)?.remove();
+  }, [hydrated]);
+
+  function toggleGroup(name: string) {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      try {
+        localStorage.setItem(COLLAPSE_KEY, JSON.stringify([...next]));
+      } catch {
+        // Best-effort persistence; collapse still applies for this view.
+      }
+      return next;
+    });
+  }
 
   const overall = overallStatus(checks);
   const operational = checks.filter((c) => c.status === "up").length;
@@ -280,29 +330,51 @@ export function Overview({
           <div className="overflow-hidden rounded-2xl border border-border bg-surface">
             {groups.map((g, gi) => {
               const meta = STATUS_META[worstStatus(g.all)];
+              // An active search force-expands every shown group so matches are
+              // never hidden behind a collapsed section — search behaves exactly
+              // as before. Otherwise the persisted collapse state applies.
+              const open = q !== "" || !collapsed.has(g.name);
+              const listId = `group-${gi}`;
               return (
                 <section
                   key={g.name}
                   className={gi > 0 ? "border-t border-border" : ""}
                   aria-label={g.name}
+                  data-group={g.name}
                 >
-                  <div className="flex items-center gap-3 bg-background/60 px-5 py-3">
-                    <span
-                      className={`h-2 w-2 shrink-0 rounded-full ${meta.dot}`}
-                      aria-hidden
-                    />
-                    <h3 className="min-w-0 flex-1 truncate text-sm font-semibold">
-                      {g.name}
-                    </h3>
-                    <span className="shrink-0 text-xs text-muted">
-                      {groupSummary(g.all)}
-                    </span>
-                  </div>
-                  <ul className="divide-y divide-border border-t border-border">
-                    {g.checks.map((c) => (
-                      <CheckRow key={c.id} check={c} window={window} />
-                    ))}
-                  </ul>
+                  <h3>
+                    <button
+                      type="button"
+                      onClick={() => toggleGroup(g.name)}
+                      aria-expanded={open}
+                      aria-controls={listId}
+                      className="flex w-full items-center gap-3 bg-background/60 px-5 py-3 text-left transition-colors hover:bg-background"
+                    >
+                      <Chevron
+                        className={`h-4 w-4 shrink-0 text-muted transition-transform ${open ? "rotate-90" : ""}`}
+                      />
+                      <span
+                        className={`h-2 w-2 shrink-0 rounded-full ${meta.dot}`}
+                        aria-hidden
+                      />
+                      <span className="min-w-0 flex-1 truncate text-sm font-semibold">
+                        {g.name}
+                      </span>
+                      <span className="shrink-0 text-xs font-normal text-muted">
+                        {groupSummary(g.all)}
+                      </span>
+                    </button>
+                  </h3>
+                  {open && (
+                    <ul
+                      id={listId}
+                      className="divide-y divide-border border-t border-border"
+                    >
+                      {g.checks.map((c) => (
+                        <CheckRow key={c.id} check={c} window={window} />
+                      ))}
+                    </ul>
+                  )}
                 </section>
               );
             })}
