@@ -49,7 +49,7 @@ already-computed numbers and markup.
 
 - **Grouping is a projection of Grafana labels, not a second inventory.**
   Optional overview grouping is driven entirely by a Grafana Synthetic
-  Monitoring [custom label][custom-labels] (`SM_GROUP_LABEL`, with an optional
+  Monitoring [custom label](https://grafana.com/docs/grafana-cloud/testing/synthetic-monitoring/analyze-results/custom-labels/) (`SM_GROUP_LABEL`, with an optional
   `SM_PURPOSE_LABEL` for a per-row chip). `listChecks()` reads the label off
   `sm_check_info`'s `label_<name>` field into the check's `group` / `purpose`
   fields; the overview then groups on the client. No group membership is
@@ -57,7 +57,6 @@ already-computed numbers and markup.
   the flat list is unchanged; checks missing a value fall into `Other services`.
   See [`configuration.md`](configuration.md#grouping-by-custom-label).
 
-[custom-labels]: https://grafana.com/docs/grafana-cloud/testing/synthetic-monitoring/analyze-results/custom-labels/
 
 - **Check ids identify a `(job, target)` pair, not a job name.** Grafana defines
   a check's identity as job name + target, so two checks can share a job name (or
