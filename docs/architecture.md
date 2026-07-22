@@ -35,7 +35,7 @@ already-computed numbers and markup.
 | --- | --- |
 | [`lib/config.ts`](../lib/config.ts) | All environment-driven configuration, read once. Decides mock vs. live. |
 | [`lib/prometheus.ts`](../lib/prometheus.ts) | Cached HTTP client for the Prometheus query API. `instantQuery` (point-in-time) and `rangeQuery` (time series). `escapeLabel` for safe PromQL. |
-| [`lib/synthetics.ts`](../lib/synthetics.ts) | Domain layer. `listChecks()` discovers services from `sm_check_info`; `getOverview()` computes status + uptime across windows; `getSiteHistory()` builds the detail-page series. |
+| [`lib/synthetics.ts`](../lib/synthetics.ts) | Domain layer. `listChecks()` discovers services from `sm_check_info` (incl. optional `group`/`purpose` from custom labels); `getOverview()` computes status + uptime across windows; `getSiteHistory()` builds the detail-page series. |
 | [`lib/mock.ts`](../lib/mock.ts) | Representative sample data used when credentials are absent or `MOCK=1`. |
 | [`lib/buckets.ts`](../lib/buckets.ts) | Bucketing helpers for the uptime history strip. |
 | [`lib/types.ts`](../lib/types.ts) | Shared types: `Status`, `WindowKey`, `Check`, `CheckStatus`, etc. |
@@ -46,6 +46,18 @@ already-computed numbers and markup.
 - **Services are discovered, not configured.** Adding or removing a synthetic
   check in Grafana is automatically reflected — there is no service list to
   maintain in this repo. See `listChecks()`.
+
+- **Grouping is a projection of Grafana labels, not a second inventory.**
+  Optional overview grouping is driven entirely by a Grafana Synthetic
+  Monitoring [custom label][custom-labels] (`SM_GROUP_LABEL`, with an optional
+  `SM_PURPOSE_LABEL` for a per-row chip). `listChecks()` reads the label off
+  `sm_check_info`'s `label_<name>` field into the check's `group` / `purpose`
+  fields; the overview then groups on the client. No group membership is
+  hardcoded, so groups never drift from the discovered checks. Unset labels ⇒
+  the flat list is unchanged; checks missing a value fall into `Other services`.
+  See [`configuration.md`](configuration.md#grouping-by-custom-label).
+
+[custom-labels]: https://grafana.com/docs/grafana-cloud/testing/synthetic-monitoring/analyze-results/custom-labels/
 
 - **Check ids identify a `(job, target)` pair, not a job name.** Grafana defines
   a check's identity as job name + target, so two checks can share a job name (or

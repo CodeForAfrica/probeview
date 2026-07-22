@@ -183,6 +183,53 @@ If the names differ, override them:
 
 ---
 
+## Grouping by custom label
+
+Large installations often monitor several endpoints for one product family (a
+public site, its API, an admin console, an auth endpoint). ProbeView can group
+those on the overview into named sections, driven entirely by a Grafana
+**custom label** — no service list is maintained in this repo.
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `SM_GROUP_LABEL` | unset ⇒ off | Name of the custom label used as the **group** heading (e.g. `product`). |
+| `SM_PURPOSE_LABEL` | unset ⇒ off | Name of the custom label shown as a compact **secondary chip** on each row (e.g. `purpose`). |
+
+### How it works
+
+Grafana Synthetic Monitoring [custom labels](https://grafana.com/docs/grafana-cloud/testing/synthetic-monitoring/analyze-results/custom-labels/) are exposed on
+`sm_check_info` with a `label_` prefix. Setting `SM_GROUP_LABEL=product` makes
+ProbeView read `label_product` off each check during discovery. So a check
+configured in Grafana with:
+
+```text
+product = PesaCheck
+purpose = API
+```
+
+renders under a **PesaCheck** section, with a small **API** chip on its row.
+
+- Checks that share a `label_<group>` value appear in one named section. Group
+  headings show the **worst** child status as a dot plus an honest impact
+  summary — `All 3 operational`, `1 of 3 affected`, or `Status unavailable for
+  1 of 3` — so a single failing endpoint never mislabels the whole group as
+  down. Every check stays independently clickable with its own history.
+- Groups stay **expanded** (never collapsed), in a stable order (named groups
+  alphabetical, `Other services` last); the selected sort applies within each
+  group. Search matches the group name, check name, target URL, and purpose.
+- Checks with **no value** for the group label gather under a clearly named
+  **`Other services`** section. When **no** check carries the label at all, the
+  overview keeps its original flat list — this feature is purely additive.
+
+Both variables are **server-side only** (no `NEXT_PUBLIC_` prefix): grouping is
+resolved on the server and only the resolved group/purpose strings reach the
+browser, never the label names. Mock data ships representative grouped and
+ungrouped checks, so `MOCK=1 SM_GROUP_LABEL=product SM_PURPOSE_LABEL=purpose`
+previews the layout without Grafana credentials.
+
+
+---
+
 ## Quick troubleshooting
 
 | Symptom | Likely cause | Fix |
@@ -193,6 +240,7 @@ If the names differ, override them:
 | `HTTP 401` from Prometheus | Wrong user/token, or token lacks `metrics:read` | Recheck the metrics instance ID and the access-policy scope. |
 | `HTTP 404` from Prometheus | `GRAFANA_PROM_URL` missing the `/api/prom` suffix | Append `/api/prom` to the URL. |
 | A service flaps up/down | `CURRENT_WINDOW` is shorter than the check interval | Increase `CURRENT_WINDOW`. |
+| Groups not showing (live mode) | `SM_GROUP_LABEL` unset, or checks have no value for that custom label | Set `SM_GROUP_LABEL` to a label your checks carry; confirm the label appears as `label_<name>` on `sm_check_info` (run `introspect.mjs`). |
 
 For anything else, run `scripts/introspect.mjs` first — it reproduces the exact
 queries the app makes and surfaces most misconfigurations directly.
