@@ -388,15 +388,17 @@ export function Overview({
             No services match “{query.trim()}”.
           </p>
         ) : (
-          <div className="overflow-hidden rounded-2xl border border-border bg-surface">
+          // Each top-level entry is its own bordered card, so a group's start
+          // and end read unambiguously among the interleaved ungrouped rows.
+          <div className="space-y-3">
             {entries.map((e, ei) => {
-              // Ungrouped checks render as a plain top-level row, interleaved
-              // among the group sections by the active sort.
+              // Ungrouped checks render as a plain single-row card, interleaved
+              // among the group cards by the active sort.
               if (e.kind === "single") {
                 return (
                   <ul
                     key={`single:${e.check.id}`}
-                    className={ei > 0 ? "border-t border-border" : ""}
+                    className="overflow-hidden rounded-xl border border-border bg-surface"
                   >
                     <CheckRow check={e.check} window={window} />
                   </ul>
@@ -411,7 +413,7 @@ export function Overview({
               return (
                 <section
                   key={`group:${e.name}`}
-                  className={ei > 0 ? "border-t border-border" : ""}
+                  className="overflow-hidden rounded-xl border border-border bg-surface"
                   aria-label={e.name}
                   data-group={e.name}
                 >
@@ -421,10 +423,13 @@ export function Overview({
                       onClick={() => toggleGroup(e.name)}
                       aria-expanded={open}
                       aria-controls={listId}
-                      className="flex w-full items-center gap-3 bg-background/60 px-5 py-3 text-left transition-colors hover:bg-background"
+                      // Same left padding, dot size, and gap as CheckRow so the
+                      // header's dot and name line up with each member's status
+                      // dot and check name.
+                      className="flex w-full items-center gap-4 bg-background/60 px-5 py-3 text-left transition-colors hover:bg-background"
                     >
                       <span
-                        className={`h-2 w-2 shrink-0 rounded-full ${meta.dot}`}
+                        className={`h-2.5 w-2.5 shrink-0 rounded-full ${meta.dot}`}
                         aria-hidden
                       />
                       <span className="min-w-0 flex-1 truncate text-sm font-semibold">
