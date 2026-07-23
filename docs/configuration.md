@@ -217,13 +217,20 @@ renders under a **PesaCheck** section, with a small **API** chip on its row.
 - Groups are **collapsible** — expanded by default, with a chevron indicating
   state. A collapsed group keeps its status dot and impact summary visible, so a
   failing endpoint is never hidden. Each visitor's collapsed groups are
-  remembered across visits (in `localStorage`, client-side only). Group order is
-  stable (named groups alphabetical, `Other services` last) and the selected
-  sort applies within each group. Search matches the group name, check name,
-  target URL, and purpose, and always expands groups with matches.
-- Checks with **no value** for the group label gather under a clearly named
-  **`Other services`** section. When **no** check carries the label at all, the
-  overview keeps its original flat list — this feature is purely additive.
+  remembered across visits (in `localStorage`, client-side only). Search matches
+  the group name, check name, target URL, and purpose, and always expands groups
+  with matches.
+- The active sort (Name / Uptime / Response) orders **everything** — the rows
+  within each group, the groups themselves, and the group names. Groups and
+  ungrouped checks are peers, so an ungrouped check can land between two groups.
+  A group is positioned by its **leading edge**: the member that sorts first in
+  the current direction (its lowest uptime / highest response for the default
+  worst-/slowest-first views, the reverse when flipped), which is exactly the
+  value of the group's top visible row. Entries with no data sort to the bottom and
+  ties break alphabetically.
+- Checks with **no value** for the group label render as plain top-level rows,
+  interleaved among the group sections by the same sort.
+  When **no** check carries the label at all, the overview keeps its original flat list.
 
 Both variables are **server-side only** (no `NEXT_PUBLIC_` prefix): grouping is
 resolved on the server and only the resolved group/purpose strings reach the

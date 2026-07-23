@@ -54,7 +54,8 @@ already-computed numbers and markup.
   `sm_check_info`'s `label_<name>` field into the check's `group` / `purpose`
   fields; the overview then groups on the client. No group membership is
   hardcoded, so groups never drift from the discovered checks. Unset labels ⇒
-  the flat list is unchanged; checks missing a value fall into `Other services`.
+  the flat list is unchanged; checks missing a value render as plain rows
+  interleaved among the groups by the active sort.
   See [`configuration.md`](configuration.md#grouping-by-custom-label).
 
 

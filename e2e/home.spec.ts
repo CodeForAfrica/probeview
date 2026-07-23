@@ -4,8 +4,8 @@ import { expect, test } from "@playwright/test";
 // server runs with MOCK=1, see playwright.config.ts). Of the ten fixture
 // checks, only "PesaCheck Admin" is down, so the system is a partial outage
 // with nine operational. The fixtures also carry group labels, so the overview
-// renders grouped sections (PesaCheck, sensors.AFRICA) plus an "Other services"
-// fallback for the ungrouped checks.
+// renders grouped sections (PesaCheck, sensors.AFRICA); the ungrouped checks
+// render as plain top-level rows interleaved among the groups by the sort.
 test.describe("home page", () => {
   test("shows the overall status banner and operational count", async ({
     page,
@@ -33,8 +33,13 @@ test.describe("home page", () => {
     await expect(
       page.getByRole("heading", { level: 3, name: "sensors.AFRICA" }),
     ).toBeVisible();
+    // Ungrouped checks are no longer swept into an "Other services" section...
     await expect(
       page.getByRole("heading", { level: 3, name: "Other services" }),
+    ).toHaveCount(0);
+    // ...they render as plain top-level rows instead.
+    await expect(
+      page.getByRole("link", { name: /codeforafrica\.org/ }),
     ).toBeVisible();
     // PesaCheck has one down member of three — reported as affected, never as a
     // blanket "Down" for the whole group.

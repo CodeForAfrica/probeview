@@ -14,9 +14,6 @@ import { CoverageNote } from "./CoverageNote";
 import { Chevron, Search } from "./icons";
 import { StatusBanner } from "./StatusBanner";
 
-/** Fallback section for checks that carry no group label. */
-const OTHER_GROUP = "Other services";
-
 /** localStorage key holding the names of groups the visitor has collapsed. */
 const COLLAPSE_KEY = "probeview:collapsed-groups";
 
@@ -127,12 +124,62 @@ function sortChecks(
   });
 }
 
-interface Group {
-  name: string;
-  /** Rows to render (search-filtered, sorted). */
-  checks: CheckStatus[];
-  /** Every child of the group, for the honest impact summary/dot. */
-  all: CheckStatus[];
+/** A top-level overview row: either a collapsible group or a lone check. */
+type Entry =
+  | {
+      kind: "group";
+      name: string;
+      /** Rows to render (search-filtered, sorted). */
+      checks: CheckStatus[];
+      /** Every child of the group, for the honest impact summary/dot. */
+      all: CheckStatus[];
+    }
+  | { kind: "single"; name: string; check: CheckStatus };
+
+/**
+ * A group's position among its peers is anchored to its "leading edge": the
+ * member that sorts first in the current direction — the lowest uptime / highest
+ * response for the default worst-/slowest-first views, the reverse when flipped.
+ * That is exactly the value of the group's top visible row, so a group header
+ * lines up where its first row would sit as a lone check, and an ungrouped check
+ * interleaves naturally between groups even when a group's members vary wildly. A
+ * lone check is its own leading edge. Returns null when no member has data (so
+ * the entry sinks to the bottom, matching the row-level rule in `sortChecks`).
+ */
+function leadingValue(
+  entry: Entry,
+  key: "uptime" | "response",
+  window: WindowKey,
+  dir: 1 | -1,
+): number | null {
+  const members = entry.kind === "group" ? entry.checks : [entry.check];
+  let best: number | null = null;
+  for (const c of members) {
+    const v = key === "uptime" ? c.uptime[window] : c.responseMs[window];
+    if (v == null) continue;
+    if (best == null || (dir === 1 ? v < best : v > best)) best = v;
+  }
+  return best;
+}
+
+/** Order top-level entries by the active sort, mirroring `sortChecks`. */
+function sortEntries(
+  list: Entry[],
+  sort: { key: SortKey; dir: SortDir },
+  window: WindowKey,
+): Entry[] {
+  const dir: 1 | -1 = sort.dir === "asc" ? 1 : -1;
+  return [...list].sort((a, b) => {
+    if (sort.key === "name") return dir * a.name.localeCompare(b.name);
+    const av = leadingValue(a, sort.key, window, dir);
+    const bv = leadingValue(b, sort.key, window, dir);
+    // Entries with no data always sort to the bottom, regardless of direction.
+    if (av == null && bv == null) return a.name.localeCompare(b.name);
+    if (av == null) return 1;
+    if (bv == null) return -1;
+    if (av === bv) return a.name.localeCompare(b.name);
+    return dir * (av - bv);
+  });
 }
 
 export function Overview({
@@ -206,24 +253,26 @@ export function Overview({
     return sortChecks(matched, sort, window);
   }, [checks, q, sort, window]);
 
-  // Grouped presentation. Group order is stable (named groups alphabetical,
-  // "Other services" always last); the selected sort applies within each group.
-  const groups = useMemo<Group[]>(() => {
+  // Grouped presentation. Named groups and ungrouped checks are peers: the
+  // active sort orders them together (see `sortEntries`/`leadingValue`) and
+  // applies within each group, so an ungrouped check can land between two
+  // groups. There is no synthetic "Other services" bucket — ungrouped checks
+  // render as flat rows interleaved among the group sections.
+  const entries = useMemo<Entry[]>(() => {
     if (!grouped) return [];
     const byName = new Map<string, CheckStatus[]>();
+    const singles: CheckStatus[] = [];
     for (const c of checks) {
-      const key = c.group ?? OTHER_GROUP;
-      const bucket = byName.get(key);
+      if (!c.group) {
+        singles.push(c);
+        continue;
+      }
+      const bucket = byName.get(c.group);
       if (bucket) bucket.push(c);
-      else byName.set(key, [c]);
+      else byName.set(c.group, [c]);
     }
-    const ordered = [...byName.entries()].sort(([a], [b]) => {
-      if (a === OTHER_GROUP) return 1;
-      if (b === OTHER_GROUP) return -1;
-      return a.localeCompare(b);
-    });
-    const result: Group[] = [];
-    for (const [name, all] of ordered) {
+    const built: Entry[] = [];
+    for (const [name, all] of byName) {
       // When the group name itself matches, show the whole group; otherwise
       // show only the children that match the query.
       const shown =
@@ -231,13 +280,25 @@ export function Overview({
           ? all
           : all.filter((c) => matchesQuery(c, q));
       if (shown.length === 0) continue;
-      result.push({ name, checks: sortChecks(shown, sort, window), all });
+      built.push({
+        kind: "group",
+        name,
+        checks: sortChecks(shown, sort, window),
+        all,
+      });
     }
-    return result;
+    for (const c of singles) {
+      if (q && !matchesQuery(c, q)) continue;
+      built.push({ kind: "single", name: c.name, check: c });
+    }
+    return sortEntries(built, sort, window);
   }, [grouped, checks, q, sort, window]);
 
   const visibleCount = grouped
-    ? groups.reduce((n, g) => n + g.checks.length, 0)
+    ? entries.reduce(
+        (n, e) => n + (e.kind === "group" ? e.checks.length : 1),
+        0,
+      )
     : visible.length;
 
   function onSort(key: SortKey) {
@@ -322,47 +383,59 @@ export function Overview({
       </div>
 
       {grouped ? (
-        groups.length === 0 ? (
+        entries.length === 0 ? (
           <p className="rounded-2xl border border-border bg-surface px-5 py-10 text-center text-sm text-muted">
             No services match “{query.trim()}”.
           </p>
         ) : (
           <div className="overflow-hidden rounded-2xl border border-border bg-surface">
-            {groups.map((g, gi) => {
-              const meta = STATUS_META[worstStatus(g.all)];
+            {entries.map((e, ei) => {
+              // Ungrouped checks render as a plain top-level row, interleaved
+              // among the group sections by the active sort.
+              if (e.kind === "single") {
+                return (
+                  <ul
+                    key={`single:${e.check.id}`}
+                    className={ei > 0 ? "border-t border-border" : ""}
+                  >
+                    <CheckRow check={e.check} window={window} />
+                  </ul>
+                );
+              }
+              const meta = STATUS_META[worstStatus(e.all)];
               // An active search force-expands every shown group so matches are
               // never hidden behind a collapsed section — search behaves exactly
               // as before. Otherwise the persisted collapse state applies.
-              const open = q !== "" || !collapsed.has(g.name);
-              const listId = `group-${gi}`;
+              const open = q !== "" || !collapsed.has(e.name);
+              const listId = `group-${ei}`;
               return (
                 <section
-                  key={g.name}
-                  className={gi > 0 ? "border-t border-border" : ""}
-                  aria-label={g.name}
-                  data-group={g.name}
+                  key={`group:${e.name}`}
+                  className={ei > 0 ? "border-t border-border" : ""}
+                  aria-label={e.name}
+                  data-group={e.name}
                 >
                   <h3>
                     <button
                       type="button"
-                      onClick={() => toggleGroup(g.name)}
+                      onClick={() => toggleGroup(e.name)}
                       aria-expanded={open}
                       aria-controls={listId}
                       className="flex w-full items-center gap-3 bg-background/60 px-5 py-3 text-left transition-colors hover:bg-background"
                     >
-                      <Chevron
-                        className={`h-4 w-4 shrink-0 text-muted transition-transform ${open ? "rotate-90" : ""}`}
-                      />
                       <span
                         className={`h-2 w-2 shrink-0 rounded-full ${meta.dot}`}
                         aria-hidden
                       />
                       <span className="min-w-0 flex-1 truncate text-sm font-semibold">
-                        {g.name}
+                        {e.name}
                       </span>
                       <span className="shrink-0 text-xs font-normal text-muted">
-                        {groupSummary(g.all)}
+                        {groupSummary(e.all)}
                       </span>
+                      <Chevron
+                        className={`h-4 w-4 shrink-0 text-muted transition-transform ${open ? "rotate-90" : ""}`}
+                      />
                     </button>
                   </h3>
                   {open && (
@@ -370,7 +443,7 @@ export function Overview({
                       id={listId}
                       className="divide-y divide-border border-t border-border"
                     >
-                      {g.checks.map((c) => (
+                      {e.checks.map((c) => (
                         <CheckRow key={c.id} check={c} window={window} />
                       ))}
                     </ul>

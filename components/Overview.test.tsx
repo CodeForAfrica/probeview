@@ -269,7 +269,7 @@ describe("Overview window toggle", () => {
 
 describe("Overview grouping", () => {
   // A PesaCheck group (Web up, API up, Admin down), a sensors group (all up),
-  // and an ungrouped service that must land under "Other services".
+  // and an ungrouped service that renders as a plain top-level row.
   // Member names deliberately avoid the group word so search-by-group-name is
   // exercised independently of search-by-check-name.
   const grouped = [
@@ -312,22 +312,24 @@ describe("Overview grouping", () => {
   // Persisted collapse state would otherwise leak between tests.
   beforeEach(() => localStorage.clear());
 
-  it("renders one section per group plus an 'Other services' fallback, ordered stably", () => {
+  it("renders one section per named group, with no 'Other services' fallback", () => {
     render(<Overview checks={grouped} updated="now" />);
-    // Named groups alphabetical; the fallback always last.
-    expect(groupNames()).toEqual([
-      "PesaCheck",
-      "sensors.AFRICA",
-      "Other services",
-    ]);
+    // Only real groups get a section; the default (Name asc) sort orders them.
+    expect(groupNames()).toEqual(["PesaCheck", "sensors.AFRICA"]);
+    // The ungrouped check renders as a plain top-level row, never a section.
+    expect(
+      screen.queryByRole("heading", { level: 3, name: "Other services" }),
+    ).toBeNull();
+    expect(rowIds()).toContain("solo");
   });
 
   it("summarises impact without relabelling a partially-affected group as down", () => {
     render(<Overview checks={grouped} updated="now" />);
     // One of three PesaCheck members is down...
     expect(screen.getByText("1 of 3 affected")).toBeInTheDocument();
-    // ...the healthy groups report all-operational (sensors.AFRICA + Other)...
-    expect(screen.getAllByText("All 1 operational")).toHaveLength(2);
+    // ...the one healthy group reports all-operational (only sensors.AFRICA now
+    // that the ungrouped check no longer forms an "Other services" group)...
+    expect(screen.getAllByText("All 1 operational")).toHaveLength(1);
     // ...and the group is never flattened to a bare "Down" label.
     expect(screen.queryByText("Down")).toBeNull();
   });
@@ -438,6 +440,75 @@ describe("Overview grouping", () => {
     // Searching must never hide matches behind a collapsed section.
     await user.type(screen.getByRole("searchbox"), "pesacheck");
     expect(rowIds()).toContain("pc-admin");
+  });
+});
+
+describe("Overview grouped sorting", () => {
+  // Two groups and one ungrouped check, chosen so the ungrouped check's value
+  // falls between the two groups AND inside one group's spread. Alpha's members
+  // straddle Mid (90 < 95 < 99.9); Zeta sits entirely above Mid.
+  const mixed = [
+    check({
+      id: "a-hi",
+      name: "Alpha Hi",
+      group: "Alpha",
+      uptime: byWindow(99.9),
+    }),
+    check({
+      id: "a-lo",
+      name: "Alpha Lo",
+      group: "Alpha",
+      uptime: byWindow(90.0),
+    }),
+    check({ id: "mid", name: "Mid", uptime: byWindow(95.0) }),
+    check({
+      id: "z-hi",
+      name: "Zeta Hi",
+      group: "Zeta",
+      uptime: byWindow(99.99),
+    }),
+    check({
+      id: "z-lo",
+      name: "Zeta Lo",
+      group: "Zeta",
+      uptime: byWindow(99.5),
+    }),
+  ];
+
+  function groupNames(): string[] {
+    return Array.from(document.querySelectorAll("[data-group]")).map(
+      (el) => el.getAttribute("data-group") ?? "",
+    );
+  }
+
+  beforeEach(() => localStorage.clear());
+
+  it("interleaves an ungrouped check between groups by name", () => {
+    render(<Overview checks={mixed} updated="now" />);
+    // Default sort is Name asc: Alpha (group) < Mid (single) < Zeta (group).
+    expect(groupNames()).toEqual(["Alpha", "Zeta"]);
+    expect(rowIds()).toEqual(["a-hi", "a-lo", "mid", "z-hi", "z-lo"]);
+  });
+
+  it("positions a group by its worst member and drops the single between them (uptime asc)", async () => {
+    const user = userEvent.setup();
+    render(<Overview checks={mixed} updated="now" />);
+
+    await user.click(screen.getByRole("button", { name: /Sort by Uptime/ }));
+    // Leading edge (min) per entry: Alpha 90, Mid 95, Zeta 99.5.
+    expect(groupNames()).toEqual(["Alpha", "Zeta"]);
+    expect(rowIds()).toEqual(["a-lo", "a-hi", "mid", "z-lo", "z-hi"]);
+  });
+
+  it("flips the group's anchor to its best member when the direction flips (uptime desc)", async () => {
+    const user = userEvent.setup();
+    render(<Overview checks={mixed} updated="now" />);
+
+    await user.click(screen.getByRole("button", { name: /Sort by Uptime/ }));
+    await user.click(screen.getByRole("button", { name: /Sort by Uptime/ }));
+    // Leading edge (max) per entry: Zeta 99.99, Alpha 99.9, Mid 95.
+    expect(groupNames()).toEqual(["Zeta", "Alpha"]);
+    expect(rowIds()).toEqual(["z-hi", "z-lo", "a-hi", "a-lo", "mid"]);
   });
 });
 
