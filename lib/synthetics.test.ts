@@ -48,6 +48,46 @@ const sample = (metric: Record<string, string>, v: string): Sample => ({
   value: [0, v],
 });
 
+// Drives every overview query for a single check; `current` sets the
+// reachability value returned for the short [1h] window.
+//
+// Routing depends on mockConfig.currentWindow ("1h") being distinct from
+// every WINDOW range (24h/7d/14d/30d/1y) — the current query is matched by its
+// "[1h]" range before the SUCCESS/DURATION branches. If currentWindow ever
+// collides with a window range, the matching here would mis-route.
+const wireOverview = (current: string) =>
+  prom.instantQuery.mockImplementation((q: string) => {
+    if (q === "sm_info")
+      return Promise.resolve([
+        sample(
+          { job: "Site A", instance: "https://a.org", region: "London" },
+          "1",
+        ),
+      ]);
+    // The summary stats query a fixed-resolution sub-series, matched first.
+    if (q.startsWith("min_over_time"))
+      return Promise.resolve([sample({}, "180")]);
+    if (q.startsWith("avg_over_time"))
+      return Promise.resolve([sample({}, "520")]);
+    if (q.startsWith("max_over_time"))
+      return Promise.resolve([sample({}, "7560")]);
+    if (q.includes("[1h]"))
+      return Promise.resolve(
+        current === ""
+          ? []
+          : [sample({ job: "Site A", instance: "https://a.org" }, current)],
+      );
+    if (q.includes("DURATION"))
+      return Promise.resolve([
+        sample({ job: "Site A", instance: "https://a.org" }, "240"),
+      ]);
+    if (q.includes("SUCCESS"))
+      return Promise.resolve([
+        sample({ job: "Site A", instance: "https://a.org" }, "99.95"),
+      ]);
+    return Promise.resolve([]);
+  });
+
 beforeEach(() => {
   vi.clearAllMocks();
   mockConfig.mock = false;
@@ -181,39 +221,6 @@ describe("getOverview", () => {
     expect(prom.instantQuery).not.toHaveBeenCalled();
   });
 
-  // Drives every overview query for a single check; `current` sets the
-  // reachability value returned for the short [1h] window.
-  //
-  // Routing depends on mockConfig.currentWindow ("1h") being distinct from
-  // every WINDOW range (24h/7d/30d/1y) — the current query is matched by its
-  // "[1h]" range before the SUCCESS/DURATION branches. If currentWindow ever
-  // collides with a window range, the matching here would mis-route.
-  const wireOverview = (current: string) =>
-    prom.instantQuery.mockImplementation((q: string) => {
-      if (q === "sm_info")
-        return Promise.resolve([
-          sample(
-            { job: "Site A", instance: "https://a.org", region: "London" },
-            "1",
-          ),
-        ]);
-      if (q.includes("[1h]"))
-        return Promise.resolve(
-          current === ""
-            ? []
-            : [sample({ job: "Site A", instance: "https://a.org" }, current)],
-        );
-      if (q.includes("DURATION"))
-        return Promise.resolve([
-          sample({ job: "Site A", instance: "https://a.org" }, "240"),
-        ]);
-      if (q.includes("SUCCESS"))
-        return Promise.resolve([
-          sample({ job: "Site A", instance: "https://a.org" }, "99.95"),
-        ]);
-      return Promise.resolve([]);
-    });
-
   it("maps per-window uptime and response, deriving an up status", async () => {
     wireOverview("100");
 
@@ -229,8 +236,14 @@ describe("getOverview", () => {
       target: "https://a.org",
       region: "London",
       status: "up",
-      uptime: { "24h": 99.95, "7d": 99.95, "30d": 99.95, "1y": 99.95 },
-      responseMs: { "24h": 240, "7d": 240, "30d": 240, "1y": 240 },
+      uptime: {
+        "24h": 99.95,
+        "7d": 99.95,
+        "14d": 99.95,
+        "30d": 99.95,
+        "1y": 99.95,
+      },
+      responseMs: { "24h": 240, "7d": 240, "14d": 240, "30d": 240, "1y": 240 },
     });
   });
 
@@ -247,7 +260,7 @@ describe("getOverview", () => {
   });
 
   it("reports windows beyond retention as insufficient and skips their queries", async () => {
-    mockConfig.retentionDays = 14; // covers 24h + 7d, not 30d/1y
+    mockConfig.retentionDays = 14; // covers 24h + 7d + 14d, not 30d/1y
     wireOverview("100");
 
     const { checks } = await getOverview();
@@ -257,12 +270,14 @@ describe("getOverview", () => {
     expect(site.uptime).toEqual({
       "24h": 99.95,
       "7d": 99.95,
+      "14d": 99.95,
       "30d": null,
       "1y": null,
     });
     expect(site.responseMs).toEqual({
       "24h": 240,
       "7d": 240,
+      "14d": 240,
       "30d": null,
       "1y": null,
     });
@@ -294,19 +309,7 @@ describe("getSiteHistory", () => {
   });
 
   it("builds clamped bars, response points, and per-window uptime", async () => {
-    prom.instantQuery.mockImplementation((q: string) => {
-      if (q === "sm_info")
-        return Promise.resolve([
-          sample(
-            { job: "Site A", instance: "https://a.org", region: "London" },
-            "1",
-          ),
-        ]);
-      if (q.includes("[1h]")) return Promise.resolve([sample({}, "100")]); // current → up
-      if (q.includes("DURATION")) return Promise.resolve([sample({}, "240")]); // respNow
-      if (q.includes("SUCCESS")) return Promise.resolve([sample({}, "99.9")]); // per-window uptime
-      return Promise.resolve([]);
-    });
+    wireOverview("100");
     // Return readings at the first three grid slots of whatever plan the code
     // requests (start/step come from the real bucket plan), so the assertions
     // don't depend on the wall clock.
@@ -344,10 +347,11 @@ describe("getSiteHistory", () => {
     expect(history.status).toBe("up");
     expect(history.responseMs).toBe(240);
     expect(history.uptime).toEqual({
-      "24h": 99.9,
-      "7d": 99.9,
-      "30d": 99.9,
-      "1y": 99.9,
+      "24h": 99.95,
+      "7d": 99.95,
+      "14d": 99.95,
+      "30d": 99.95,
+      "1y": 99.95,
     });
     // Bars span the full 24h grid (48 buckets); the three readings fill the
     // first slots — the 1.5 fraction is clamped to 1 — and the rest are "no data".
@@ -361,23 +365,7 @@ describe("getSiteHistory", () => {
   });
 
   it("derives min/avg/max from a fixed-resolution series, independent of the window's buckets", async () => {
-    prom.instantQuery.mockImplementation((q: string) => {
-      if (q === "sm_info")
-        return Promise.resolve([
-          sample({ job: "Site A", instance: "https://a.org" }, "1"),
-        ]);
-      // The summary stats query a fixed-resolution sub-series, matched first.
-      if (q.startsWith("min_over_time"))
-        return Promise.resolve([sample({}, "180")]);
-      if (q.startsWith("avg_over_time"))
-        return Promise.resolve([sample({}, "520")]);
-      if (q.startsWith("max_over_time"))
-        return Promise.resolve([sample({}, "7560")]);
-      if (q.includes("[1h]")) return Promise.resolve([sample({}, "100")]); // current → up
-      if (q.includes("DURATION")) return Promise.resolve([sample({}, "240")]);
-      if (q.includes("SUCCESS")) return Promise.resolve([sample({}, "99.9")]);
-      return Promise.resolve([]);
-    });
+    wireOverview("0");
     prom.rangeQuery.mockResolvedValue([{ metric: {}, values: [[100, "240"]] }]);
 
     const history = (await getSiteHistory(SITE_A_ID, "7d"))!;
@@ -398,24 +386,16 @@ describe("getSiteHistory", () => {
 
   it("clamps a beyond-retention window and nulls out-of-retention uptimes", async () => {
     mockConfig.retentionDays = 14; // 1y is way beyond retention
-    prom.instantQuery.mockImplementation((q: string) => {
-      if (q === "sm_info")
-        return Promise.resolve([
-          sample({ job: "Site A", instance: "https://a.org" }, "1"),
-        ]);
-      if (q.includes("[1h]")) return Promise.resolve([sample({}, "100")]);
-      if (q.includes("DURATION")) return Promise.resolve([sample({}, "240")]);
-      if (q.includes("SUCCESS")) return Promise.resolve([sample({}, "99.9")]);
-      return Promise.resolve([]);
-    });
+    wireOverview("100");
     prom.rangeQuery.mockResolvedValue([{ metric: {}, values: [[100, "240"]] }]);
 
     const history = (await getSiteHistory(SITE_A_ID, "1y"))!;
 
     // Only the retained windows carry figures; 30d/1y read as insufficient.
     expect(history.uptime).toEqual({
-      "24h": 99.9,
-      "7d": 99.9,
+      "24h": 99.95,
+      "7d": 99.95,
+      "14d": 99.95,
       "30d": null,
       "1y": null,
     });

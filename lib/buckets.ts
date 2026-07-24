@@ -3,6 +3,7 @@ import { WINDOWS, type WindowKey } from "./types";
 const BAR_COUNT: Record<WindowKey, number> = {
   "24h": 48,
   "7d": 84,
+  "14d": 84,
   "30d": 90,
   "1y": 90,
 };

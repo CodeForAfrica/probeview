@@ -100,7 +100,7 @@ export default async function SitePage({
       <CoverageNote retentionDays={config.retentionDays} />
 
       {/* Uptime numbers across all windows */}
-      <section className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-4">
+      <section className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-5">
         {WINDOWS.map((w) => (
           <div key={w.key} className="bg-surface px-4 py-4">
             <div className="text-lg font-semibold tabular-nums">

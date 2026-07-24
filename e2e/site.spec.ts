@@ -32,6 +32,7 @@ test.describe("site detail page", () => {
     for (const label of [
       "24 hours uptime",
       "7 days uptime",
+      "14 days uptime",
       "30 days uptime",
       "1 year uptime",
     ]) {
