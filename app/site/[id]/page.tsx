@@ -10,11 +10,10 @@ import { config } from "@/lib/config";
 import { fmtMs, fmtPct } from "@/lib/format";
 import { getSiteHistory } from "@/lib/synthetics";
 import {
-  defaultWindow,
   type SiteHistory,
-  WINDOW_KEYS,
   WINDOWS,
   type WindowKey,
+  windowFromParam,
 } from "@/lib/types";
 
 type SitePageProps = {
@@ -22,19 +21,12 @@ type SitePageProps = {
   searchParams: Promise<{ window?: string | string[] }>;
 };
 
-function parseWindow(value: string | string[] | undefined): WindowKey {
-  return typeof value === "string" &&
-    (WINDOW_KEYS as string[]).includes(value)
-    ? (value as WindowKey)
-    : defaultWindow(config.retentionDays);
-}
-
 export async function generateMetadata({
   params,
   searchParams,
 }: SitePageProps): Promise<Metadata> {
   const [{ id }, query] = await Promise.all([params, searchParams]);
-  const window = parseWindow(query.window);
+  const window = windowFromParam(query.window, config.retentionDays);
   const site = await getSiteHistory(id, window).catch(() => null);
   let label = id;
   if (site) {
@@ -54,7 +46,7 @@ export default async function SitePage({
   searchParams,
 }: SitePageProps) {
   const [{ id }, query] = await Promise.all([params, searchParams]);
-  const window = parseWindow(query.window);
+  const window = windowFromParam(query.window, config.retentionDays);
 
   let site: SiteHistory | null;
   try {

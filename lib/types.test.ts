@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { defaultWindow, windowWithinRetention } from "./types";
+import { defaultWindow, windowFromParam, windowWithinRetention } from "./types";
 
 describe("windowWithinRetention", () => {
   it("treats null/undefined retention as unlimited — every window covered", () => {
@@ -46,5 +46,20 @@ describe("defaultWindow", () => {
   it("never returns nothing, even below the shortest window", () => {
     // Retention shorter than 24h still yields a window rather than undefined.
     expect(defaultWindow(0.5)).toBe("24h");
+  });
+});
+
+describe("windowFromParam", () => {
+  it("keeps a recognized window", () => {
+    expect(windowFromParam("7d", 14)).toBe("7d");
+  });
+
+  it("uses the retention-aware default for missing or unknown windows", () => {
+    expect(windowFromParam(undefined, null)).toBe("30d");
+    expect(windowFromParam("unknown", 14)).toBe("14d");
+  });
+
+  it("rejects repeated window parameters as ambiguous", () => {
+    expect(windowFromParam(["7d", "30d"], 14)).toBe("14d");
   });
 });
