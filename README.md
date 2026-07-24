@@ -17,9 +17,9 @@
 
 A public, self-hostable **status page** for your services — backed entirely by
 **Grafana Synthetic Monitoring**. ProbeView shows, for each monitored service:
-current up/down status, uptime % across 24h / 7d / 30d / 1y windows, an uptime
-history bar strip, and a response-time chart, with a per-service detail view at
-`/site/<id>`.
+current up/down status, uptime % across 24h / 7d / 14d / 30d / 1y windows, an
+uptime history bar strip, and a response-time chart, with a per-service detail
+view at `/site/<id>`.
 
 It is **configurable by environment variables alone** — no code changes needed
 to point it at your own Grafana stack, rename it, or re-brand it. Services are

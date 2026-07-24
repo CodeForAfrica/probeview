@@ -145,6 +145,11 @@ When set, any window longer than the retained span (e.g. `30d` and `1y` on a
   near-empty strip.
 - A small **coverage note** explains the limit on both pages.
 
+The window set includes a `14d` (14 days) figure that sits between `7d` and
+`30d`, so a 14-day plan has an honest, fully-labeled summary for its entire
+retained span — under `METRICS_RETENTION_DAYS=14`, `14d` is the largest covered
+window, and the overview opens on it by default.
+
 Leaving it unset preserves the previous behavior exactly — every window is
 queried and reported in full. Set it to match your plan's retention (e.g. `14`)
 so the page never claims a confident `100%` over a window the data can't back.

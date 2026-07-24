@@ -26,6 +26,8 @@ export default defineConfig({
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
-    env: { MOCK: "1" },
+    // Keep fixtures deterministic even when a developer's .env.local sets a
+    // retention limit: the default-window assertion expects unlimited coverage.
+    env: { MOCK: "1", METRICS_RETENTION_DAYS: "0" },
   },
 });

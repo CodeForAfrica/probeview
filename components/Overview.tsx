@@ -5,10 +5,10 @@ import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { fmtMs, fmtPct, STATUS_META } from "@/lib/format";
 import {
   type CheckStatus,
+  defaultWindow,
   type Status,
   WINDOWS,
   type WindowKey,
-  windowWithinRetention,
 } from "@/lib/types";
 import { CoverageNote } from "./CoverageNote";
 import { Chevron, Search } from "./icons";
@@ -25,21 +25,6 @@ const BOOT_STYLE_ID = "group-collapse-boot";
 // (layout effects never run there); the boot <style> covers the initial load.
 const useBrowserLayoutEffect =
   typeof document !== "undefined" ? useLayoutEffect : useEffect;
-
-/**
- * Window the overview opens on: the usual `30d`, unless retention doesn't cover
- * it — then the largest window that *is* covered, so visitors don't land on a
- * grid of `—`.
- */
-function defaultWindow(retentionDays: number | null): WindowKey {
-  if (windowWithinRetention("30d", retentionDays)) return "30d";
-  return (
-    [...WINDOWS]
-      .reverse()
-      .find((w) => windowWithinRetention(w.key, retentionDays))?.key ??
-    WINDOWS[0].key
-  );
-}
 
 function overallStatus(checks: CheckStatus[]): Status {
   if (checks.some((c) => c.status === "down")) return "down";

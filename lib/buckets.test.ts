@@ -10,6 +10,7 @@ describe("bucketPlan", () => {
   it("returns the expected count and step per window", () => {
     expect(bucketPlan("24h", now)).toMatchObject({ count: 48, stepSec: 1800 });
     expect(bucketPlan("7d", now)).toMatchObject({ count: 84, stepSec: 7200 });
+    expect(bucketPlan("14d", now)).toMatchObject({ count: 84, stepSec: 14400 });
     expect(bucketPlan("30d", now)).toMatchObject({ count: 90, stepSec: 28800 });
     expect(bucketPlan("1y", now)).toMatchObject({ count: 90, stepSec: 350400 });
   });
@@ -84,8 +85,8 @@ describe("bucketPlan with a retention clamp", () => {
 
 describe("responsePlan", () => {
   it("matches bucketPlan when the step is already at or below a day", () => {
-    // 24h/7d/30d steps (1800s–28800s) never exceed the 1-day cap.
-    for (const key of ["24h", "7d", "30d"] as WindowKey[]) {
+    // 24h/7d/14d/30d steps (1800s–28800s) never exceed the 1-day cap.
+    for (const key of ["24h", "7d", "14d", "30d"] as WindowKey[]) {
       expect(responsePlan(key, now)).toEqual(bucketPlan(key, now));
     }
   });

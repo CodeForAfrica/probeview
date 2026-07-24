@@ -11,24 +11,23 @@ import { fmtMs, fmtPct } from "@/lib/format";
 import { getSiteHistory } from "@/lib/synthetics";
 import {
   type SiteHistory,
-  WINDOW_KEYS,
   WINDOWS,
   type WindowKey,
+  windowFromParam,
 } from "@/lib/types";
 
-function parseWindow(value: string | undefined): WindowKey {
-  return (WINDOW_KEYS as string[]).includes(value ?? "")
-    ? (value as WindowKey)
-    : "7d";
-}
+type SitePageProps = {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ window?: string | string[] }>;
+};
 
 export async function generateMetadata({
   params,
-}: {
-  params: Promise<{ id: string }>;
-}): Promise<Metadata> {
-  const { id } = await params;
-  const site = await getSiteHistory(id, "7d").catch(() => null);
+  searchParams,
+}: SitePageProps): Promise<Metadata> {
+  const [{ id }, query] = await Promise.all([params, searchParams]);
+  const window = windowFromParam(query.window, config.retentionDays);
+  const site = await getSiteHistory(id, window).catch(() => null);
   let label = id;
   if (site) {
     const target = site.check.target
@@ -45,12 +44,9 @@ export async function generateMetadata({
 export default async function SitePage({
   params,
   searchParams,
-}: {
-  params: Promise<{ id: string }>;
-  searchParams: Promise<{ window?: string }>;
-}) {
-  const { id } = await params;
-  const window = parseWindow((await searchParams).window);
+}: SitePageProps) {
+  const [{ id }, query] = await Promise.all([params, searchParams]);
+  const window = windowFromParam(query.window, config.retentionDays);
 
   let site: SiteHistory | null;
   try {
@@ -100,7 +96,7 @@ export default async function SitePage({
       <CoverageNote retentionDays={config.retentionDays} />
 
       {/* Uptime numbers across all windows */}
-      <section className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-4">
+      <section className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-5">
         {WINDOWS.map((w) => (
           <div key={w.key} className="bg-surface px-4 py-4">
             <div className="text-lg font-semibold tabular-nums">
@@ -154,6 +150,7 @@ function WindowTabs({ id, active }: { id: string; active: WindowKey }) {
           key={w.key}
           href={`/site/${id}?window=${w.key}`}
           scroll={false}
+          aria-current={active === w.key ? "page" : undefined}
           className={`rounded-md px-3 py-1 transition-colors ${
             active === w.key
               ? "bg-foreground text-background"

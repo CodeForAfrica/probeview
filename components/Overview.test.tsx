@@ -9,7 +9,14 @@ function byWindow(
   value: number | null,
   over: Partial<Record<WindowKey, number | null>> = {},
 ): Record<WindowKey, number | null> {
-  return { "24h": value, "7d": value, "30d": value, "1y": value, ...over };
+  return {
+    "24h": value,
+    "7d": value,
+    "14d": value,
+    "30d": value,
+    "1y": value,
+    ...over,
+  };
 }
 
 function check(
@@ -526,8 +533,9 @@ describe("Overview retention coverage", () => {
       screen.getByText(/Only the last/, { exact: false }),
     ).toBeInTheDocument();
     expect(screen.getByText(/14 days/)).toBeInTheDocument();
-    // ...and since 30d is beyond retention, the default window falls back to 7d.
-    expect(screen.getByText("7d uptime")).toBeInTheDocument();
+    // ...and since 30d is beyond retention, the default window falls back to
+    // 14d — the largest window the 14-day plan fully covers.
+    expect(screen.getByText("14d uptime")).toBeInTheDocument();
     expect(screen.queryByText("30d uptime")).toBeNull();
   });
 
