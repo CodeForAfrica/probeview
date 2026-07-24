@@ -17,21 +17,25 @@ import {
   type WindowKey,
 } from "@/lib/types";
 
-// No (or unknown) `?window=` opens on the largest window retention covers —
-// the same default the overview uses, so the two pages stay in step.
-function parseWindow(value: string | undefined): WindowKey {
-  return (WINDOW_KEYS as string[]).includes(value ?? "")
+type SitePageProps = {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ window?: string | string[] }>;
+};
+
+function parseWindow(value: string | string[] | undefined): WindowKey {
+  return typeof value === "string" &&
+    (WINDOW_KEYS as string[]).includes(value)
     ? (value as WindowKey)
     : defaultWindow(config.retentionDays);
 }
 
 export async function generateMetadata({
   params,
-}: {
-  params: Promise<{ id: string }>;
-}): Promise<Metadata> {
-  const { id } = await params;
-  const site = await getSiteHistory(id, "7d").catch(() => null);
+  searchParams,
+}: SitePageProps): Promise<Metadata> {
+  const [{ id }, query] = await Promise.all([params, searchParams]);
+  const window = parseWindow(query.window);
+  const site = await getSiteHistory(id, window).catch(() => null);
   let label = id;
   if (site) {
     const target = site.check.target
@@ -48,12 +52,9 @@ export async function generateMetadata({
 export default async function SitePage({
   params,
   searchParams,
-}: {
-  params: Promise<{ id: string }>;
-  searchParams: Promise<{ window?: string }>;
-}) {
-  const { id } = await params;
-  const window = parseWindow((await searchParams).window);
+}: SitePageProps) {
+  const [{ id }, query] = await Promise.all([params, searchParams]);
+  const window = parseWindow(query.window);
 
   let site: SiteHistory | null;
   try {
@@ -157,6 +158,7 @@ function WindowTabs({ id, active }: { id: string; active: WindowKey }) {
           key={w.key}
           href={`/site/${id}?window=${w.key}`}
           scroll={false}
+          aria-current={active === w.key ? "page" : undefined}
           className={`rounded-md px-3 py-1 transition-colors ${
             active === w.key
               ? "bg-foreground text-background"
