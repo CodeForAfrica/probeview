@@ -54,6 +54,21 @@ function matcher(check: Check): string {
 // Discovery
 // ---------------------------------------------------------------------------
 
+/**
+ * Read a configured Grafana custom label off an `sm_check_info` sample. Custom
+ * labels surface with a `label_` prefix, so `SM_GROUP_LABEL=product` maps to
+ * `metric.label_product`. Returns `undefined` when the label name is unset or
+ * the sample has no (non-empty) value for it.
+ */
+function customLabel(
+  metric: Record<string, string>,
+  labelName: string,
+): string | undefined {
+  if (!labelName) return undefined;
+  const v = metric[`label_${labelName}`]?.trim();
+  return v || undefined;
+}
+
 /** List every synthetic check from `sm_check_info`, deduped by job+instance. */
 export async function listChecks(): Promise<Check[]> {
   const samples = await instantQuery(M.info);
@@ -71,6 +86,8 @@ export async function listChecks(): Promise<Check[]> {
       job,
       instance,
       region: s.metric.region,
+      group: customLabel(s.metric, config.groupLabel),
+      purpose: customLabel(s.metric, config.purposeLabel),
     });
   }
   return [...byKey.values()].sort((a, b) => a.name.localeCompare(b.name));

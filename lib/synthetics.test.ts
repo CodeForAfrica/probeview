@@ -18,6 +18,8 @@ const { mockConfig, mockData, prom, unstableCache } = vi.hoisted(() => ({
       durationCount: "DURATION_COUNT",
     },
     mock: false,
+    groupLabel: "",
+    purposeLabel: "",
     currentWindow: "1h",
     metricsCacheSeconds: 60,
     retentionDays: null as number | null,
@@ -50,6 +52,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockConfig.mock = false;
   mockConfig.retentionDays = null;
+  mockConfig.groupLabel = "";
+  mockConfig.purposeLabel = "";
 });
 
 describe("listChecks", () => {
@@ -83,6 +87,60 @@ describe("listChecks", () => {
         region: "NY",
       },
     ]);
+  });
+
+  it("reads group and purpose from the configured custom labels", async () => {
+    mockConfig.groupLabel = "product";
+    mockConfig.purposeLabel = "purpose";
+    prom.instantQuery.mockResolvedValue([
+      sample(
+        {
+          job: "PesaCheck API",
+          instance: "https://api.pesacheck.org",
+          label_product: "PesaCheck",
+          label_purpose: "API",
+        },
+        "1",
+      ),
+      // No label values → group/purpose stay unset (falls into "Other services").
+      sample({ job: "Solo", instance: "https://solo.example.org" }, "1"),
+      // Present but blank → treated as unset, not an empty group.
+      sample(
+        {
+          job: "Blank",
+          instance: "https://blank.example.org",
+          label_product: "  ",
+        },
+        "1",
+      ),
+    ]);
+
+    const checks = await listChecks();
+    const byJob = (j: string) => checks.find((c) => c.job === j)!;
+
+    expect(byJob("PesaCheck API").group).toBe("PesaCheck");
+    expect(byJob("PesaCheck API").purpose).toBe("API");
+    expect(byJob("Solo").group).toBeUndefined();
+    expect(byJob("Solo").purpose).toBeUndefined();
+    expect(byJob("Blank").group).toBeUndefined();
+  });
+
+  it("ignores custom labels when no group label is configured", async () => {
+    prom.instantQuery.mockResolvedValue([
+      sample(
+        {
+          job: "PesaCheck API",
+          instance: "https://api.pesacheck.org",
+          label_product: "PesaCheck",
+          label_purpose: "API",
+        },
+        "1",
+      ),
+    ]);
+
+    const [check] = await listChecks();
+    expect(check.group).toBeUndefined();
+    expect(check.purpose).toBeUndefined();
   });
 
   it("gives every discovered (job, instance) pair a unique, slug-prefixed id", async () => {

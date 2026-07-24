@@ -153,6 +153,8 @@ and when to change it.
 | `CURRENT_WINDOW` | `1h` | Window used to decide current up/down |
 | `METRICS_CACHE_SECONDS` | `60` | Metrics-cache window (seconds) for Grafana queries; see note below |
 | `METRICS_RETENTION_DAYS` | unset | Metrics retention in days; longer windows show insufficient coverage and charts clamp to retained data |
+| `SM_GROUP_LABEL` | unset | Group the overview by this Grafana custom label (read from `label_<name>`); unset ⇒ flat list |
+| `SM_PURPOSE_LABEL` | unset | Optional secondary label shown as a compact chip on each row (e.g. `API`) |
 | `SM_METRIC_*` | SM schema defaults | Override metric names if your stack differs |
 
 > ⚠️ Anything prefixed `NEXT_PUBLIC_` is shipped to the browser. The Grafana
@@ -199,6 +201,13 @@ Grafana Synthetics ──► Prometheus (Mimir) ──► lib/prometheus.ts ─�
 Design notes:
 
 - Services are **discovered dynamically** from `sm_check_info` — nothing is hardcoded.
+- The overview can **group checks** by a Grafana [custom label](https://grafana.com/docs/grafana-cloud/testing/synthetic-monitoring/analyze-results/custom-labels/)
+  (`SM_GROUP_LABEL`) — e.g. all endpoints of one product family under one
+  heading — with an optional per-row purpose chip (`SM_PURPOSE_LABEL`). Grouping
+  is a projection of Grafana labels, not a second inventory, so it never drifts
+  from discovered checks; unset ⇒ the flat list is unchanged. See
+  [`docs/configuration.md`](docs/configuration.md#grouping-by-custom-label).
+
 - The Prometheus client and data layer cache responses for `METRICS_CACHE_SECONDS`,
   so the public page is cheap to serve under load and the `updated` timestamp
   reflects when Grafana was last queried. `METRICS_CACHE_SECONDS` sets **how often

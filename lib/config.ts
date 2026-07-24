@@ -53,6 +53,20 @@ export const config = {
   },
 
   /**
+   * Grafana Synthetic Monitoring custom-label names used for dynamic grouping.
+   * A check's custom labels surface on `sm_check_info` with a `label_` prefix,
+   * so `SM_GROUP_LABEL=product` is read from `label_product`.
+   *
+   * `groupLabel` names the group a check belongs to (e.g. a product family);
+   * `purposeLabel` names a compact secondary role shown on the row (e.g. `API`).
+   *
+   * Both are optional: If unset, the feature is off and checks render in
+   * a single flat list, exactly as before.
+   */
+  groupLabel: env("SM_GROUP_LABEL"),
+  purposeLabel: env("SM_PURPOSE_LABEL"),
+
+  /**
    * Window used to decide current up/down. We compute reachability over this
    * window from the probe_all_* counters (the raw probe_success metric is an
    * aggregated metric on Grafana Cloud and can't be queried directly). Should

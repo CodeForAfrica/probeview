@@ -1,9 +1,11 @@
 import { expect, test } from "@playwright/test";
 
 // These assertions rely on the deterministic fixtures in lib/mock.ts (the
-// server runs with MOCK=1, see playwright.config.ts). Of the eight fixture
-// services, only "africanDRONE" is down, so the system is a partial outage
-// with seven operational.
+// server runs with MOCK=1, see playwright.config.ts). Of the ten fixture
+// checks, only "PesaCheck Admin" is down, so the system is a partial outage
+// with nine operational. The fixtures also carry group labels, so the overview
+// renders grouped sections (PesaCheck, sensors.AFRICA); the ungrouped checks
+// render as plain top-level rows interleaved among the groups by the sort.
 test.describe("home page", () => {
   test("shows the overall status banner and operational count", async ({
     page,
@@ -12,7 +14,7 @@ test.describe("home page", () => {
     await expect(
       page.getByRole("heading", { name: "Partial system outage" }),
     ).toBeVisible();
-    await expect(page.getByText("7/8 services operational")).toBeVisible();
+    await expect(page.getByText("9/10 services operational")).toBeVisible();
   });
 
   test("notes that sample data is in use", async ({ page }) => {
@@ -20,26 +22,77 @@ test.describe("home page", () => {
     await expect(page.getByText("Showing sample data")).toBeVisible();
   });
 
+  test("renders named group sections with honest impact summaries", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    // Group headings are level-3 headings, distinct from the row links.
+    await expect(
+      page.getByRole("heading", { level: 3, name: "PesaCheck" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { level: 3, name: "sensors.AFRICA" }),
+    ).toBeVisible();
+    // Ungrouped checks are no longer swept into an "Other services" section...
+    await expect(
+      page.getByRole("heading", { level: 3, name: "Other services" }),
+    ).toHaveCount(0);
+    // ...they render as plain top-level rows instead.
+    await expect(
+      page.getByRole("link", { name: /codeforafrica\.org/ }),
+    ).toBeVisible();
+    // PesaCheck has one down member of three — reported as affected, never as a
+    // blanket "Down" for the whole group.
+    await expect(page.getByText("1 of 3 affected")).toBeVisible();
+  });
+
+  test("collapses a group and remembers it after a reload", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const toggle = page.getByRole("button", { name: /PesaCheck/ });
+    const memberRow = page.getByRole("link", { name: /admin\.pesacheck\.org/ });
+
+    // Expanded by default.
+    await expect(toggle).toHaveAttribute("aria-expanded", "true");
+    await expect(memberRow).toBeVisible();
+
+    // Collapsing hides the rows but keeps the impact summary in the header.
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await expect(memberRow).toBeHidden();
+    await expect(page.getByText("1 of 3 affected")).toBeVisible();
+
+    // The collapsed state survives a reload (persisted in localStorage).
+    await page.reload();
+    await expect(
+      page.getByRole("button", { name: /PesaCheck/ }),
+    ).toHaveAttribute("aria-expanded", "false");
+    await expect(
+      page.getByRole("link", { name: /admin\.pesacheck\.org/ }),
+    ).toBeHidden();
+  });
+
   test("links each service to its detail page", async ({ page }) => {
     await page.goto("/");
-    // Ids are the readable slug plus a stable hash suffix.
-    await expect(page.getByRole("link", { name: /PesaCheck/ })).toHaveAttribute(
-      "href",
-      /^\/site\/pesacheck-[a-z0-9]+$/,
-    );
+    // Ids are the readable slug plus a stable hash suffix. Match rows by their
+    // (unique) target host, since several checks share the "PesaCheck" name.
     await expect(
-      page.getByRole("link", { name: /africanDRONE/ }),
-    ).toHaveAttribute("href", /^\/site\/africandrone-[a-z0-9]+$/);
+      page.getByRole("link", { name: /thecontinent\.org/ }),
+    ).toHaveAttribute("href", /^\/site\/the-continent-[a-z0-9]+$/);
+    await expect(
+      page.getByRole("link", { name: /admin\.pesacheck\.org/ }),
+    ).toHaveAttribute("href", /^\/site\/pesacheck-admin-[a-z0-9]+$/);
   });
 
   test("navigates to a service detail page when a row is clicked", async ({
     page,
   }) => {
     await page.goto("/");
-    await page.getByRole("link", { name: /PesaCheck/ }).click();
-    await expect(page).toHaveURL(/\/site\/pesacheck-[a-z0-9]+$/);
+    await page.getByRole("link", { name: /thecontinent\.org/ }).click();
+    await expect(page).toHaveURL(/\/site\/the-continent-[a-z0-9]+$/);
     await expect(
-      page.getByRole("heading", { name: "PesaCheck" }),
+      page.getByRole("heading", { name: "The Continent" }),
     ).toBeVisible();
   });
 

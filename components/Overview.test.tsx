@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import type { CheckStatus, Status, WindowKey } from "@/lib/types";
 import { Overview } from "./Overview";
 
@@ -264,6 +264,251 @@ describe("Overview window toggle", () => {
     // ...and sorting by uptime now uses the 24h numbers (Alpha 80 < Bravo 100).
     await user.click(screen.getByRole("button", { name: /Sort by Uptime/ }));
     expect(rowIds()).toEqual(["alpha", "bravo"]);
+  });
+});
+
+describe("Overview grouping", () => {
+  // A PesaCheck group (Web up, API up, Admin down), a sensors group (all up),
+  // and an ungrouped service that renders as a plain top-level row.
+  // Member names deliberately avoid the group word so search-by-group-name is
+  // exercised independently of search-by-check-name.
+  const grouped = [
+    check({
+      id: "pc-web",
+      name: "Marketing",
+      group: "PesaCheck",
+      purpose: "Web",
+    }),
+    check({
+      id: "pc-api",
+      name: "Public data",
+      group: "PesaCheck",
+      purpose: "API",
+    }),
+    check({
+      id: "pc-admin",
+      name: "Console",
+      group: "PesaCheck",
+      purpose: "Admin",
+      status: "down",
+    }),
+    check({
+      id: "sa-web",
+      name: "Dashboard",
+      group: "sensors.AFRICA",
+      purpose: "Web",
+    }),
+    check({ id: "solo", name: "Solo Service" }),
+  ];
+
+  // Group section headings, in DOM order. Each collapse toggle carries its
+  // group name as a data attribute, independent of the visible summary text.
+  function groupNames(): string[] {
+    return Array.from(document.querySelectorAll("[data-group]")).map(
+      (el) => el.getAttribute("data-group") ?? "",
+    );
+  }
+
+  // Persisted collapse state would otherwise leak between tests.
+  beforeEach(() => localStorage.clear());
+
+  it("renders one section per named group, with no 'Other services' fallback", () => {
+    render(<Overview checks={grouped} updated="now" />);
+    // Only real groups get a section; the default (Name asc) sort orders them.
+    expect(groupNames()).toEqual(["PesaCheck", "sensors.AFRICA"]);
+    // The ungrouped check renders as a plain top-level row, never a section.
+    expect(
+      screen.queryByRole("heading", { level: 3, name: "Other services" }),
+    ).toBeNull();
+    expect(rowIds()).toContain("solo");
+  });
+
+  it("summarises impact without relabelling a partially-affected group as down", () => {
+    render(<Overview checks={grouped} updated="now" />);
+    // One of three PesaCheck members is down...
+    expect(screen.getByText("1 of 3 affected")).toBeInTheDocument();
+    // ...the one healthy group reports all-operational (only sensors.AFRICA now
+    // that the ungrouped check no longer forms an "Other services" group)...
+    expect(screen.getAllByText("All 1 operational")).toHaveLength(1);
+    // ...and the group is never flattened to a bare "Down" label.
+    expect(screen.queryByText("Down")).toBeNull();
+  });
+
+  it("summarises a group with missing data as unavailable", () => {
+    render(
+      <Overview
+        checks={[
+          check({ id: "a", name: "A", group: "G", status: "unknown" }),
+          check({ id: "b", name: "B", group: "G" }),
+        ]}
+        updated="now"
+      />,
+    );
+    expect(
+      screen.getByText("Status unavailable for 1 of 2"),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps each grouped check independently linked to its detail page", () => {
+    render(<Overview checks={grouped} updated="now" />);
+    expect(rowIds()).toContain("pc-admin");
+    expect(rowIds()).toContain("solo");
+    expect(rowIds()).toHaveLength(grouped.length);
+  });
+
+  it("renders the purpose as compact secondary metadata on the row", () => {
+    render(<Overview checks={grouped} updated="now" />);
+    expect(screen.getByText("Admin")).toBeInTheDocument();
+    expect(screen.getByText("API")).toBeInTheDocument();
+  });
+
+  it("shows the whole group when the group name matches the query", async () => {
+    const user = userEvent.setup();
+    render(<Overview checks={grouped} updated="now" />);
+    await user.type(screen.getByRole("searchbox"), "pesacheck");
+    // All three PesaCheck members show even though none contains "pesacheck"
+    // beyond the shared group name.
+    expect(rowIds()).toEqual(
+      expect.arrayContaining(["pc-web", "pc-api", "pc-admin"]),
+    );
+    expect(rowIds()).toHaveLength(3);
+    expect(groupNames()).toEqual(["PesaCheck"]);
+  });
+
+  it("filters to matching children (by purpose) under their group heading", async () => {
+    const user = userEvent.setup();
+    render(<Overview checks={grouped} updated="now" />);
+    await user.type(screen.getByRole("searchbox"), "admin");
+    expect(rowIds()).toEqual(["pc-admin"]);
+    expect(groupNames()).toEqual(["PesaCheck"]);
+  });
+
+  it("falls back to the flat list when no check carries a group", () => {
+    render(
+      <Overview
+        checks={[check({ id: "a", name: "A" }), check({ id: "b", name: "B" })]}
+        updated="now"
+      />,
+    );
+    expect(screen.queryAllByRole("heading", { level: 3 })).toHaveLength(0);
+    expect(rowIds()).toEqual(["a", "b"]);
+  });
+
+  it("starts expanded and collapses a group while keeping its impact summary visible", async () => {
+    const user = userEvent.setup();
+    render(<Overview checks={grouped} updated="now" />);
+
+    const toggle = screen.getByRole("button", { name: /PesaCheck/ });
+    // Expanded by default: every member row is present.
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(rowIds()).toContain("pc-admin");
+
+    await user.click(toggle);
+    // Collapsed: rows are removed from the tree...
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(rowIds()).not.toContain("pc-admin");
+    expect(rowIds()).not.toContain("pc-web");
+    // ...but the affected count stays visible in the header, never hidden.
+    expect(screen.getByText("1 of 3 affected")).toBeInTheDocument();
+
+    await user.click(toggle);
+    expect(rowIds()).toContain("pc-admin");
+  });
+
+  it("remembers collapsed groups across visits", async () => {
+    const user = userEvent.setup();
+    const { unmount } = render(<Overview checks={grouped} updated="now" />);
+    await user.click(screen.getByRole("button", { name: /PesaCheck/ }));
+    expect(rowIds()).not.toContain("pc-admin");
+    unmount();
+
+    // A fresh mount hydrates the persisted state from localStorage.
+    render(<Overview checks={grouped} updated="now" />);
+    expect(screen.getByRole("button", { name: /PesaCheck/ })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    expect(rowIds()).not.toContain("pc-admin");
+  });
+
+  it("force-expands a collapsed group when a search matches it", async () => {
+    const user = userEvent.setup();
+    render(<Overview checks={grouped} updated="now" />);
+    await user.click(screen.getByRole("button", { name: /PesaCheck/ }));
+    expect(rowIds()).not.toContain("pc-admin");
+
+    // Searching must never hide matches behind a collapsed section.
+    await user.type(screen.getByRole("searchbox"), "pesacheck");
+    expect(rowIds()).toContain("pc-admin");
+  });
+});
+
+describe("Overview grouped sorting", () => {
+  // Two groups and one ungrouped check, chosen so the ungrouped check's value
+  // falls between the two groups AND inside one group's spread. Alpha's members
+  // straddle Mid (90 < 95 < 99.9); Zeta sits entirely above Mid.
+  const mixed = [
+    check({
+      id: "a-hi",
+      name: "Alpha Hi",
+      group: "Alpha",
+      uptime: byWindow(99.9),
+    }),
+    check({
+      id: "a-lo",
+      name: "Alpha Lo",
+      group: "Alpha",
+      uptime: byWindow(90.0),
+    }),
+    check({ id: "mid", name: "Mid", uptime: byWindow(95.0) }),
+    check({
+      id: "z-hi",
+      name: "Zeta Hi",
+      group: "Zeta",
+      uptime: byWindow(99.99),
+    }),
+    check({
+      id: "z-lo",
+      name: "Zeta Lo",
+      group: "Zeta",
+      uptime: byWindow(99.5),
+    }),
+  ];
+
+  function groupNames(): string[] {
+    return Array.from(document.querySelectorAll("[data-group]")).map(
+      (el) => el.getAttribute("data-group") ?? "",
+    );
+  }
+
+  beforeEach(() => localStorage.clear());
+
+  it("interleaves an ungrouped check between groups by name", () => {
+    render(<Overview checks={mixed} updated="now" />);
+    // Default sort is Name asc: Alpha (group) < Mid (single) < Zeta (group).
+    expect(groupNames()).toEqual(["Alpha", "Zeta"]);
+    expect(rowIds()).toEqual(["a-hi", "a-lo", "mid", "z-hi", "z-lo"]);
+  });
+
+  it("positions a group by its worst member and drops the single between them (uptime asc)", async () => {
+    const user = userEvent.setup();
+    render(<Overview checks={mixed} updated="now" />);
+
+    await user.click(screen.getByRole("button", { name: /Sort by Uptime/ }));
+    // Leading edge (min) per entry: Alpha 90, Mid 95, Zeta 99.5.
+    expect(groupNames()).toEqual(["Alpha", "Zeta"]);
+    expect(rowIds()).toEqual(["a-lo", "a-hi", "mid", "z-lo", "z-hi"]);
+  });
+
+  it("flips the group's anchor to its best member when the direction flips (uptime desc)", async () => {
+    const user = userEvent.setup();
+    render(<Overview checks={mixed} updated="now" />);
+
+    await user.click(screen.getByRole("button", { name: /Sort by Uptime/ }));
+    await user.click(screen.getByRole("button", { name: /Sort by Uptime/ }));
+    // Leading edge (max) per entry: Zeta 99.99, Alpha 99.9, Mid 95.
+    expect(groupNames()).toEqual(["Zeta", "Alpha"]);
+    expect(rowIds()).toEqual(["z-hi", "z-lo", "a-hi", "a-lo", "mid"]);
   });
 });
 

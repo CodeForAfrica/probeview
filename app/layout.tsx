@@ -8,6 +8,12 @@ import "./globals.css";
 // Runs before paint to set the theme, avoiding a light/dark flash on load.
 const themeBoot = `(function(){try{var t=localStorage.getItem('theme');if(t!=='light'&&t!=='dark'){t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.dataset.theme=t;}catch(e){}})();`;
 
+// Runs before paint to hide groups the visitor previously collapsed, so they
+// never flash open during hydration. Keyed on `data-group` (present in the
+// server HTML); the Overview removes this <style> once React takes over. Mirrors
+// the theme boot above. See components/Overview.tsx.
+const groupBoot = `(function(){try{var r=localStorage.getItem('probeview:collapsed-groups');if(!r)return;var n=JSON.parse(r);if(!Array.isArray(n)||!n.length)return;var c=n.map(function(g){var e=String(g).replace(/[\\\\"]/g,'\\\\$&');return '[data-group="'+e+'"] ul{display:none!important}[data-group="'+e+'"] svg{transform:none!important;rotate:none!important}';}).join('');var s=document.createElement('style');s.id='group-collapse-boot';s.textContent=c;document.head.appendChild(s);}catch(e){}})();`;
+
 // Footer links: brighter than the surrounding muted text, underlined, with a
 // hover state — so they read as links rather than plain text.
 const footerLink =
@@ -36,6 +42,8 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         {/* biome-ignore lint/security/noDangerouslySetInnerHtml: static, non-user-controlled boot script that must run before paint to prevent a theme flash */}
         <script dangerouslySetInnerHTML={{ __html: themeBoot }} />
+        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: static, non-user-controlled boot script that must run before paint to prevent collapsed groups flashing open */}
+        <script dangerouslySetInnerHTML={{ __html: groupBoot }} />
         <header className="border-b border-border">
           <div className="mx-auto w-full max-w-3xl px-5 py-5 flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2.5">
