@@ -23,12 +23,14 @@ beforeEach(() => {
 describe("mock data honors METRICS_RETENTION_DAYS", () => {
   it("nulls overview figures for windows beyond retention", () => {
     const site = mockOverview().find((s) => s.name === "PesaCheck")!;
-    // 14 days covers 24h + 7d only.
+    // 14 days covers 24h + 7d + 14d.
     expect(typeof site.uptime["24h"]).toBe("number");
     expect(typeof site.uptime["7d"]).toBe("number");
+    expect(typeof site.uptime["14d"]).toBe("number");
     expect(site.uptime["30d"]).toBeNull();
     expect(site.uptime["1y"]).toBeNull();
     expect(typeof site.responseMs["7d"]).toBe("number");
+    expect(typeof site.responseMs["14d"]).toBe("number");
     expect(site.responseMs["30d"]).toBeNull();
     expect(site.responseMs["1y"]).toBeNull();
   });

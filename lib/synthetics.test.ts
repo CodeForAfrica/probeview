@@ -282,8 +282,8 @@ describe("getOverview", () => {
       "1y": null,
     });
 
-    // The out-of-retention windows were never queried: only the [24h] and [7d]
-    // ranges appear (plus the [1h] current-reachability query and discovery).
+    // The out-of-retention windows were never queried: only the [24h], [7d],
+    // and [14d] ranges appear (plus [1h] current reachability and discovery).
     const ranges = prom.instantQuery.mock.calls.map((c) => c[0] as string);
     expect(ranges.some((q) => q.includes("[30d]"))).toBe(false);
     expect(ranges.some((q) => q.includes("[1y]"))).toBe(false);
