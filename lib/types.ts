@@ -1,16 +1,20 @@
 export type Status = "up" | "degraded" | "down" | "unknown";
 
-export type WindowKey = "24h" | "7d" | "14d" | "30d" | "1y";
+export const WINDOWS = [
+  { key: "24h", label: "24 hours", seconds: 86_400, barCount: 48 },
+  { key: "7d", label: "7 days", seconds: 604_800, barCount: 84 },
+  { key: "14d", label: "14 days", seconds: 1_209_600, barCount: 84 },
+  { key: "30d", label: "30 days", seconds: 2_592_000, barCount: 90 },
+  { key: "1y", label: "1 year", seconds: 31_536_000, barCount: 90 },
+] as const;
 
-export const WINDOWS: { key: WindowKey; label: string; seconds: number }[] = [
-  { key: "24h", label: "24 hours", seconds: 86_400 },
-  { key: "7d", label: "7 days", seconds: 604_800 },
-  { key: "14d", label: "14 days", seconds: 1_209_600 },
-  { key: "30d", label: "30 days", seconds: 2_592_000 },
-  { key: "1y", label: "1 year", seconds: 31_536_000 },
-];
+export type WindowKey = (typeof WINDOWS)[number]["key"];
 
 export const WINDOW_KEYS = WINDOWS.map((w) => w.key);
+
+export function isWindowKey(value: string | undefined): value is WindowKey {
+  return WINDOW_KEYS.some((key) => key === value);
+}
 
 /**
  * Is a window fully covered by `retentionDays` of retained metrics? A window
@@ -43,6 +47,19 @@ export function defaultWindow(
       .find((w) => windowWithinRetention(w.key, retentionDays))?.key ??
     WINDOWS[0].key
   );
+}
+
+/**
+ * Resolve a URL `?window=` value. Repeated or unknown values fall back to the
+ * retention-aware page default rather than choosing an ambiguous value.
+ */
+export function windowFromParam(
+  value: string | string[] | undefined,
+  retentionDays: number | null | undefined,
+): WindowKey {
+  return typeof value === "string" && isWindowKey(value)
+    ? value
+    : defaultWindow(retentionDays);
 }
 
 /** A single synthetic check (one monitored target). */

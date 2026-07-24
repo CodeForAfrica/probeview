@@ -1,13 +1,5 @@
 import { WINDOWS, type WindowKey } from "./types";
 
-const BAR_COUNT: Record<WindowKey, number> = {
-  "24h": 48,
-  "7d": 84,
-  "14d": 84,
-  "30d": 90,
-  "1y": 90,
-};
-
 const MIN_STEP_SECONDS = 300; // 5 min — keeps rate() windows above check frequency
 
 /**
@@ -41,11 +33,12 @@ export function bucketPlan(
   now = Date.now(),
   maxSpanSec?: number,
 ): BucketPlan {
-  const windowSeconds =
-    WINDOWS.find((w) => w.key === window)?.seconds ?? WINDOWS[0].seconds;
+  const definition = WINDOWS.find((w) => w.key === window) ?? WINDOWS[0];
   const seconds =
-    maxSpanSec != null ? Math.min(windowSeconds, maxSpanSec) : windowSeconds;
-  const count = BAR_COUNT[window];
+    maxSpanSec != null
+      ? Math.min(definition.seconds, maxSpanSec)
+      : definition.seconds;
+  const count = definition.barCount;
   const stepSec = Math.max(MIN_STEP_SECONDS, Math.round(seconds / count));
   const endSec = Math.floor(now / 1000);
   const startSec = endSec - stepSec * count;
