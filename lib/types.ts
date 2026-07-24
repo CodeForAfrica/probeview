@@ -1,10 +1,11 @@
 export type Status = "up" | "degraded" | "down" | "unknown";
 
-export type WindowKey = "24h" | "7d" | "30d" | "1y";
+export type WindowKey = "24h" | "7d" | "14d" | "30d" | "1y";
 
 export const WINDOWS: { key: WindowKey; label: string; seconds: number }[] = [
   { key: "24h", label: "24 hours", seconds: 86_400 },
   { key: "7d", label: "7 days", seconds: 604_800 },
+  { key: "14d", label: "14 days", seconds: 1_209_600 },
   { key: "30d", label: "30 days", seconds: 2_592_000 },
   { key: "1y", label: "1 year", seconds: 31_536_000 },
 ];
