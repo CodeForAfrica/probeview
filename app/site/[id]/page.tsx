@@ -10,16 +10,19 @@ import { config } from "@/lib/config";
 import { fmtMs, fmtPct } from "@/lib/format";
 import { getSiteHistory } from "@/lib/synthetics";
 import {
+  defaultWindow,
   type SiteHistory,
   WINDOW_KEYS,
   WINDOWS,
   type WindowKey,
 } from "@/lib/types";
 
+// No (or unknown) `?window=` opens on the largest window retention covers —
+// the same default the overview uses, so the two pages stay in step.
 function parseWindow(value: string | undefined): WindowKey {
   return (WINDOW_KEYS as string[]).includes(value ?? "")
     ? (value as WindowKey)
-    : "7d";
+    : defaultWindow(config.retentionDays);
 }
 
 export async function generateMetadata({

@@ -27,6 +27,24 @@ export function windowWithinRetention(
   return w == null || w.seconds <= retentionDays * 86_400;
 }
 
+/**
+ * The window a page opens on: the usual `30d`, unless retention doesn't cover it
+ * — then the largest window that *is* covered, so visitors don't land on a grid
+ * of `—`. Shared by the overview and the per-site detail page so both defaults
+ * track retention identically.
+ */
+export function defaultWindow(
+  retentionDays: number | null | undefined,
+): WindowKey {
+  if (windowWithinRetention("30d", retentionDays)) return "30d";
+  return (
+    [...WINDOWS]
+      .reverse()
+      .find((w) => windowWithinRetention(w.key, retentionDays))?.key ??
+    WINDOWS[0].key
+  );
+}
+
 /** A single synthetic check (one monitored target). */
 export interface Check {
   id: string;
