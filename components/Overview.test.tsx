@@ -534,7 +534,7 @@ describe("Overview retention coverage", () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/14 days/)).toBeInTheDocument();
     // ...and since 30d is beyond retention, the default window falls back to
-    // 14d — the largest window the 14-day plan fully covers.
+    // 14d — the largest window the free plan fully covers.
     expect(screen.getByText("14d uptime")).toBeInTheDocument();
     expect(screen.queryByText("30d uptime")).toBeNull();
   });
