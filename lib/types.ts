@@ -16,6 +16,8 @@ export function isWindowKey(value: string | undefined): value is WindowKey {
   return WINDOW_KEYS.some((key) => key === value);
 }
 
+const DEFAULT_DISPLAY_WINDOW = "30d";
+
 /**
  * Is a window fully covered by `retentionDays` of retained metrics? A window
  * longer than what the plan keeps can't be reported honestly. `null`/`undefined`
@@ -32,7 +34,7 @@ export function windowWithinRetention(
 }
 
 /**
- * The window a page opens on: the usual `30d`, unless retention doesn't cover it
+ * The window a page opens on: DEFAULT_DISPLAY_WINDOW, unless retention doesn't cover it
  * — then the largest window that *is* covered, so visitors don't land on a grid
  * of `—`. Shared by the overview and the per-site detail page so both defaults
  * track retention identically.
@@ -40,7 +42,8 @@ export function windowWithinRetention(
 export function defaultWindow(
   retentionDays: number | null | undefined,
 ): WindowKey {
-  if (windowWithinRetention("30d", retentionDays)) return "30d";
+  if (windowWithinRetention(DEFAULT_DISPLAY_WINDOW, retentionDays))
+    return DEFAULT_DISPLAY_WINDOW;
   return (
     [...WINDOWS]
       .reverse()

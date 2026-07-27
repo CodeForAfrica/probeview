@@ -24,7 +24,7 @@ export interface BucketPlan {
  * Decide how many buckets / what step a window's history strip uses.
  *
  * `maxSpanSec` clamps the span so a window longer than what the plan retains
- * (e.g. `1y` on a 14-day plan) shows the retained data at usable density rather
+ * (e.g. `1y` on a free plan) shows the retained data at usable density rather
  * than a near-empty strip: the bar count is unchanged, so each bar just gets
  * narrower. Omit it (or pass a span ≥ the window) for the full window.
  */

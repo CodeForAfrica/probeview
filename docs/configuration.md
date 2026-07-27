@@ -132,8 +132,8 @@ Accepts any Prometheus duration string (`5m`, `30m`, `1h`, `2h`, …).
 - The number of days your Grafana plan retains metrics. On the free Grafana
   Cloud plan this is ~14 days.
 
-When set, any window longer than the retained span (e.g. `30d` and `1y` on a
-14-day plan) is treated as **not fully covered**:
+When set, any window longer than the retained span (e.g. `30d` and `1y` on the free plan)
+is treated as **not fully covered**:
 
 - Its uptime and response figures are reported as **insufficient** (`—`)
   everywhere they surface — the overview list, the per-site uptime grid, and the
@@ -146,13 +146,13 @@ When set, any window longer than the retained span (e.g. `30d` and `1y` on a
 - A small **coverage note** explains the limit on both pages.
 
 The window set includes a `14d` (14 days) figure that sits between `7d` and
-`30d`, so a 14-day plan has an honest, fully-labeled summary for its entire
+`30d`, so a free plan has an honest, fully-labeled summary for its entire
 retained span — under `METRICS_RETENTION_DAYS=14`, `14d` is the largest covered
 window, and the overview opens on it by default.
 
-Leaving it unset preserves the previous behavior exactly — every window is
-queried and reported in full. Set it to match your plan's retention (e.g. `14`)
-so the page never claims a confident `100%` over a window the data can't back.
+Leaving it unset means every window is queried and reported in full.
+Set it to match your plan's retention (e.g. `14`) so the page never claims a
+confident `100%` over a window the data can't back.
 
 > This is a **server-side** setting (no `NEXT_PUBLIC_` prefix). Set it to `0`,
 > a negative number, or leave it blank to mean unlimited.
