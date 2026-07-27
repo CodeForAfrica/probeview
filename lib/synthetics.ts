@@ -43,7 +43,7 @@ function coveredWindows() {
 
 /** PromQL range-vector duration for a window (e.g. "7d"). */
 function promRange(window: WindowKey): string {
-  return window; // 24h / 7d / 30d / 1y are all valid PromQL durations
+  return window; // 24h / 7d / 14d / 30d / 1y are all valid PromQL durations
 }
 
 function matcher(check: Check): string {

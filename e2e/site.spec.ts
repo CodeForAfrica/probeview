@@ -32,11 +32,18 @@ test.describe("site detail page", () => {
     for (const label of [
       "24 hours uptime",
       "7 days uptime",
+      "14 days uptime",
       "30 days uptime",
       "1 year uptime",
     ]) {
       await expect(page.getByText(label)).toBeVisible();
     }
+
+    // With unlimited retention, the shared default opens both overview and
+    // detail views on 30d.
+    await expect(
+      page.getByRole("link", { name: "30d", exact: true }),
+    ).toHaveAttribute("aria-current", "page");
 
     // The data charts render with real points.
     await expect(
