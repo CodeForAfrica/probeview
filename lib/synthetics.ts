@@ -212,6 +212,8 @@ async function fetchSiteHistory(
   const respPlan = responsePlan(window, undefined, retention ?? undefined);
   const barStep = `${barPlan.stepSec}s`;
   const respStep = `${respPlan.stepSec}s`;
+  const barQueryStart = barPlan.startSec + barPlan.stepSec;
+  const barQueryEnd = barPlan.endSec + barPlan.stepSec;
 
   const barExpr =
     `sum(rate(${M.successSum}${sel}[${barStep}]))` +
@@ -251,7 +253,10 @@ async function fetchSiteHistory(
     instantQuery(
       `1000 * sum(rate(${M.durationSum}${sel}[24h])) / sum(rate(${M.durationCount}${sel}[24h]))`,
     ),
-    rangeQuery(barExpr, barPlan.startSec, barPlan.endSec, barPlan.stepSec),
+    // Each rate() sample at timestamp T describes the bucket ending at T. Start
+    // at the first bucket edge, and ask one step past the chart so backends that
+    // omit the exact end timestamp still return the final in-window bucket.
+    rangeQuery(barExpr, barQueryStart, barQueryEnd, barPlan.stepSec),
     rangeQuery(respExpr, respPlan.startSec, respPlan.endSec, respPlan.stepSec),
     instantQuery(`min_over_time(${statRange})`),
     instantQuery(`avg_over_time(${statRange})`),
@@ -289,7 +294,7 @@ async function fetchSiteHistory(
   const bars: UptimeBucket[] = Array.from(
     { length: barPlan.count },
     (_, i) => ({
-      t: barPlan.startSec + (i + 1) * barPlan.stepSec,
+      t: barPlan.startSec + i * barPlan.stepSec,
       uptime: barByIndex.get(i) ?? null,
     }),
   );
