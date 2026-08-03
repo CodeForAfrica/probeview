@@ -14,6 +14,18 @@ async function gotoSite(page: Page, linkName: RegExp): Promise<void> {
   await page.goto(href);
 }
 
+function uptimeBars(page: Page) {
+  const chart = page.getByRole("img", { name: "Uptime history" });
+  return chart.locator("rect");
+}
+
+async function lastUptimeBar(page: Page) {
+  const rects = uptimeBars(page);
+  const count = await rects.count();
+  if (count === 0) throw new Error("Uptime history has no bars");
+  return rects.nth(count - 1);
+}
+
 test.describe("site detail page", () => {
   test("renders an operational service's details", async ({ page }) => {
     await gotoSite(page, /thecontinent\.org/);
@@ -80,6 +92,27 @@ test.describe("site detail page", () => {
     await expect(
       page.getByRole("heading", { name: "The Continent" }),
     ).toBeVisible();
+  });
+
+  test("populates the final uptime bar on 14d and longer windows", async ({
+    page,
+  }) => {
+    await gotoSite(page, /thecontinent\.org/);
+
+    const expectedBarCounts = [
+      ["14d", 84],
+      ["30d", 90],
+      ["1y", 90],
+    ] as const;
+
+    for (const [window, barCount] of expectedBarCounts) {
+      await page.getByRole("link", { name: window, exact: true }).click();
+
+      await expect(uptimeBars(page)).toHaveCount(barCount);
+      const finalBar = await lastUptimeBar(page);
+      await expect(finalBar).not.toHaveAttribute("fill", "var(--bar-empty)");
+      await expect(finalBar.locator("title")).not.toContainText("no data");
+    }
   });
 
   test("shows an error for an unknown service", async ({ page }) => {
