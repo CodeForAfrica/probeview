@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { bucketPlan } from "./buckets";
 import { checkId } from "./format";
 import { getOverview, getSiteHistory, listChecks } from "./synthetics";
 
@@ -94,6 +95,10 @@ beforeEach(() => {
   mockConfig.retentionDays = null;
   mockConfig.groupLabel = "";
   mockConfig.purposeLabel = "";
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe("listChecks", () => {
@@ -310,11 +315,11 @@ describe("getSiteHistory", () => {
 
   it("builds clamped bars, response points, and per-window uptime", async () => {
     wireOverview("100");
-    // Return readings at the first three grid slots of whatever plan the code
-    // requests (start/step come from the real bucket plan), so the assertions
-    // don't depend on the wall clock.
+    // Return readings at the first three grid slots and final grid slot of
+    // whatever plan the code requests (start/end/step come from the real bucket
+    // plan), so the assertions don't depend on the wall clock.
     prom.rangeQuery.mockImplementation(
-      (q: string, start: number, _end: number, step: number) =>
+      (q: string, start: number, end: number, step: number) =>
         Promise.resolve(
           q.includes("DURATION")
             ? [
@@ -331,9 +336,10 @@ describe("getSiteHistory", () => {
                 {
                   metric: {},
                   values: [
-                    [start + step, "0.5"],
-                    [start + 2 * step, "1"],
-                    [start + 3 * step, "1.5"],
+                    [start, "0.5"],
+                    [start + step, "1"],
+                    [start + 2 * step, "1.5"],
+                    [end - step, "0.75"],
                   ],
                 },
               ],
@@ -353,15 +359,126 @@ describe("getSiteHistory", () => {
       "30d": 99.95,
       "1y": 99.95,
     });
-    // Bars span the full 24h grid (48 buckets); the three readings fill the
-    // first slots — the 1.5 fraction is clamped to 1 — and the rest are "no data".
+    // Bars span the full 24h grid (48 buckets); readings fill the first slots
+    // and the final slot — the 1.5 fraction is clamped to 1 — and the rest are
+    // "no data".
     expect(history.bars).toHaveLength(48);
     expect(history.bars.slice(0, 3).map((b) => b.uptime)).toEqual([0.5, 1, 1]);
-    expect(history.bars.slice(3).every((b) => b.uptime === null)).toBe(true);
-    // Grid timestamps ascend by the plan's step and end at the window's edge.
+    expect(history.bars.at(-1)?.uptime).toBe(0.75);
+    expect(history.bars.slice(3, -1).every((b) => b.uptime === null)).toBe(
+      true,
+    );
+    // Grid timestamps mark bucket starts; the final bucket ends at the window edge.
     expect(history.bars[1].t - history.bars[0].t).toBe(1800);
+    expect(history.bars.at(-1)!.t + 1800).toBe(
+      history.bars[0].t + 1800 * history.bars.length,
+    );
     // The response line is left as-is (no grid fill); a non-finite reading is null.
     expect(history.response.map((p) => p.ms)).toEqual([240, null, 260]);
+  });
+
+  it("queries long-window uptime bars from the first bucket edge through one extra step", async () => {
+    const fixedNowTimestampMs = 1_700_000_000_123;
+    vi.useFakeTimers();
+    vi.setSystemTime(fixedNowTimestampMs);
+    wireOverview("100");
+    prom.rangeQuery.mockResolvedValue([{ metric: {}, values: [] }]);
+
+    for (const window of ["14d", "30d", "1y"] as const) {
+      prom.rangeQuery.mockClear();
+
+      const history = (await getSiteHistory(SITE_A_ID, window))!;
+
+      const plan = bucketPlan(window, fixedNowTimestampMs);
+      const uptimeCall = prom.rangeQuery.mock.calls.find(([q]) =>
+        String(q).includes("SUCCESS"),
+      );
+      expect(uptimeCall).toBeTruthy();
+      expect(uptimeCall?.slice(1)).toEqual([
+        plan.startSec + plan.stepSec,
+        plan.endSec + plan.stepSec,
+        plan.stepSec,
+      ]);
+      expect(history.rangeStart).toBe(plan.startSec);
+      expect(history.rangeEnd).toBe(plan.endSec);
+      expect(history.rangeEnd - history.rangeStart).toBe(
+        plan.stepSec * plan.count,
+      );
+    }
+  });
+
+  it("maps uptime samples at bucket edges and ignores samples outside the fixed grid", async () => {
+    wireOverview("100");
+    prom.rangeQuery.mockImplementation(
+      (q: string, queryStart: number, queryEnd: number, step: number) => {
+        if (q.includes("DURATION")) {
+          return Promise.resolve([{ metric: {}, values: [] }]);
+        }
+        const gridStart = queryStart - step;
+        const gridEnd = queryEnd - step;
+        return Promise.resolve([
+          {
+            metric: {},
+            values: [
+              [gridStart, "0.1"],
+              [gridStart + step, "0.2"],
+              [gridEnd, "0.3"],
+              [gridEnd + step, "0.4"],
+            ],
+          },
+        ]);
+      },
+    );
+
+    const history = (await getSiteHistory(SITE_A_ID, "30d"))!;
+
+    expect(history.bars).toHaveLength(90);
+    expect(history.bars[0].uptime).toBe(0.2);
+    expect(history.bars.at(-1)?.uptime).toBe(0.3);
+    expect(history.bars.slice(1, -1).every((b) => b.uptime === null)).toBe(
+      true,
+    );
+  });
+
+  it("populates the final uptime bar inside a retained span for beyond-retention windows", async () => {
+    const fixedNowTimestampMs = 1_700_000_000_123;
+    const retained = 14 * 86_400;
+    mockConfig.retentionDays = 14;
+    vi.useFakeTimers();
+    vi.setSystemTime(fixedNowTimestampMs);
+    wireOverview("100");
+    prom.rangeQuery.mockImplementation(
+      (q: string, _queryStart: number, queryEnd: number, step: number) => {
+        if (q.includes("DURATION")) {
+          return Promise.resolve([{ metric: {}, values: [] }]);
+        }
+        return Promise.resolve([
+          { metric: {}, values: [[queryEnd - step, "0.87"]] },
+        ]);
+      },
+    );
+
+    const history = (await getSiteHistory(SITE_A_ID, "1y"))!;
+    const plan = bucketPlan("1y", fixedNowTimestampMs, retained);
+    const uptimeCall = prom.rangeQuery.mock.calls.find(([q]) =>
+      String(q).includes("SUCCESS"),
+    );
+
+    expect(uptimeCall?.slice(1)).toEqual([
+      plan.startSec + plan.stepSec,
+      plan.endSec + plan.stepSec,
+      plan.stepSec,
+    ]);
+    expect(history.bars).toHaveLength(plan.count);
+    expect(history.rangeStart).toBe(plan.startSec);
+    expect(history.rangeEnd).toBe(plan.endSec);
+    expect(history.rangeEnd - history.rangeStart).toBe(
+      plan.stepSec * plan.count,
+    );
+    expect(history.rangeEnd).toBe(Math.floor(fixedNowTimestampMs / 1000));
+    expect(history.rangeEnd - history.rangeStart).toBeLessThanOrEqual(retained);
+    expect(history.bars.at(-1)?.uptime).toBe(0.87);
+    expect(history.uptime["1y"]).toBeNull();
   });
 
   it("derives min/avg/max from a fixed-resolution series, independent of the window's buckets", async () => {
@@ -403,8 +520,8 @@ describe("getSiteHistory", () => {
     // The uptime strip keeps the 1y bar count but spans only the retained ~14
     // days (89 steps between the first and last bar), so it stays dense.
     const RETAINED = 14 * 86_400;
-    const span = history.bars[history.bars.length - 1].t - history.bars[0].t;
-    expect(span).toBeLessThan(RETAINED);
+    const span = history.rangeEnd - history.rangeStart;
+    expect(span).toBeLessThanOrEqual(RETAINED);
     expect(span).toBeGreaterThan(
       RETAINED - (RETAINED / history.bars.length) * 2,
     );

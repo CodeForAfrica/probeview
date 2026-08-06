@@ -26,6 +26,6 @@ export default defineConfig({
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
-    env: { MOCK: "1" },
+    env: { MOCK: "1", METRICS_RETENTION_DAYS: "0" },
   },
 });

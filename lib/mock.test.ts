@@ -1,9 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { bucketPlan } from "./buckets";
 import { mockOverview, mockSiteHistory } from "./mock";
 import { WINDOW_KEYS } from "./types";
 
 const idOf = (name: string): string =>
   mockOverview().find((s) => s.name === name)!.id;
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 describe("mockOverview", () => {
   it("returns every fixture site", () => {
@@ -94,10 +99,18 @@ describe("mockSiteHistory", () => {
   });
 
   it("returns history shaped for the requested window", () => {
+    const fixedNowTimestampMs = 1_700_000_000_123;
+    vi.useFakeTimers();
+    vi.setSystemTime(fixedNowTimestampMs);
     const id = idOf("PesaCheck");
     const h = mockSiteHistory(id, "24h")!;
+    const plan = bucketPlan("24h", fixedNowTimestampMs);
+
     expect(h.window).toBe("24h");
     expect(h.check.id).toBe(id);
+    expect(h.rangeStart).toBe(plan.startSec);
+    expect(h.rangeEnd).toBe(plan.endSec);
+    expect(h.rangeEnd - h.rangeStart).toBe(plan.stepSec * plan.count);
     // 24h plans 48 buckets; bars and response points line up one-to-one.
     expect(h.bars).toHaveLength(48);
     expect(h.response).toHaveLength(48);

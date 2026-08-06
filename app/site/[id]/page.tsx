@@ -65,9 +65,9 @@ export default async function SitePage({
   }
 
   const rangeLabel =
-    site.bars.length > 0
-      ? `${new Date(site.bars[0].t * 1000).toLocaleDateString()} – ${new Date(
-          site.bars[site.bars.length - 1].t * 1000,
+    site.rangeStart < site.rangeEnd
+      ? `${new Date(site.rangeStart * 1000).toLocaleDateString()} – ${new Date(
+          site.rangeEnd * 1000,
         ).toLocaleDateString()}`
       : "";
 
