@@ -274,6 +274,8 @@ export function mockSiteHistory(
     uptime,
     responseMs: site.currentlyUp ? site.baseMs : null,
     window,
+    rangeStart: plan.startSec,
+    rangeEnd: plan.endSec,
     bars,
     response,
     responseStats,

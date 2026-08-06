@@ -135,6 +135,9 @@ export interface SiteHistory {
   responseMs: number | null;
   /** Window the bars / chart below correspond to. */
   window: WindowKey;
+  /** Chart interval represented by the bucket grid. */
+  rangeStart: number;
+  rangeEnd: number;
   bars: UptimeBucket[];
   response: ResponsePoint[];
   /** Window-consistent min/avg/max latency, independent of bucket width. */

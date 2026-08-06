@@ -387,7 +387,7 @@ describe("getSiteHistory", () => {
     for (const window of ["14d", "30d", "1y"] as const) {
       prom.rangeQuery.mockClear();
 
-      await getSiteHistory(SITE_A_ID, window);
+      const history = (await getSiteHistory(SITE_A_ID, window))!;
 
       const plan = bucketPlan(window, fixedNowTimestampMs);
       const uptimeCall = prom.rangeQuery.mock.calls.find(([q]) =>
@@ -399,6 +399,11 @@ describe("getSiteHistory", () => {
         plan.endSec + plan.stepSec,
         plan.stepSec,
       ]);
+      expect(history.rangeStart).toBe(plan.startSec);
+      expect(history.rangeEnd).toBe(plan.endSec);
+      expect(history.rangeEnd - history.rangeStart).toBe(
+        plan.stepSec * plan.count,
+      );
     }
   });
 
@@ -465,6 +470,13 @@ describe("getSiteHistory", () => {
       plan.stepSec,
     ]);
     expect(history.bars).toHaveLength(plan.count);
+    expect(history.rangeStart).toBe(plan.startSec);
+    expect(history.rangeEnd).toBe(plan.endSec);
+    expect(history.rangeEnd - history.rangeStart).toBe(
+      plan.stepSec * plan.count,
+    );
+    expect(history.rangeEnd).toBe(Math.floor(fixedNowTimestampMs / 1000));
+    expect(history.rangeEnd - history.rangeStart).toBeLessThanOrEqual(retained);
     expect(history.bars.at(-1)?.uptime).toBe(0.87);
     expect(history.uptime["1y"]).toBeNull();
   });
@@ -508,8 +520,8 @@ describe("getSiteHistory", () => {
     // The uptime strip keeps the 1y bar count but spans only the retained ~14
     // days (89 steps between the first and last bar), so it stays dense.
     const RETAINED = 14 * 86_400;
-    const span = history.bars[history.bars.length - 1].t - history.bars[0].t;
-    expect(span).toBeLessThan(RETAINED);
+    const span = history.rangeEnd - history.rangeStart;
+    expect(span).toBeLessThanOrEqual(RETAINED);
     expect(span).toBeGreaterThan(
       RETAINED - (RETAINED / history.bars.length) * 2,
     );

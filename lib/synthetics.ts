@@ -326,6 +326,8 @@ async function fetchSiteHistory(
     uptime,
     responseMs: Number.isFinite(respValue) ? respValue : null,
     window,
+    rangeStart: barPlan.startSec,
+    rangeEnd: barPlan.endSec,
     bars,
     response,
     responseStats,
