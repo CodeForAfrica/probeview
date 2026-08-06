@@ -94,7 +94,7 @@ test.describe("site detail page", () => {
     ).toBeVisible();
   });
 
-  test("populates the final uptime bar on 14d and longer windows", async ({
+  test("renders populated uptime bars for long mock windows", async ({
     page,
   }) => {
     await gotoSite(page, /thecontinent\.org/);
