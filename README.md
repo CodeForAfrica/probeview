@@ -2,6 +2,18 @@
 
 [![CI](https://github.com/CodeForAfrica/probeview/actions/workflows/ci.yml/badge.svg)](https://github.com/CodeForAfrica/probeview/actions/workflows/ci.yml)
 
+## Code for Africa Live Status
+
+**https://status.codeforafrica.org/** is powered by ProbeView and Grafana
+Synthetic Monitoring. This is the current Code for Africa status-page repository,
+replacing the retired [CodeForAfrica/upptime](https://github.com/CodeForAfrica/upptime)
+implementation.
+
+To add or update a monitored service, manage its Synthetic Monitoring check in
+[Code for Africa's Grafana](https://codeforafrica.grafana.net/). ProbeView discovers
+checks automatically from Grafana metrics; do not add services to the old
+Upptime configuration or hardcode them in this application.
+
 <table width="100%">
   <tr>
     <td align="left">
