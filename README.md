@@ -46,7 +46,7 @@ hardcode and nothing to keep in sync.
 ## Why this exists
 
 Most status pages need you to maintain a list of services, run a separate
-uptime checker, and store history somewhere. If you are *already* using Grafana
+uptime checker, and store history somewhere. If you are _already_ using Grafana
 Synthetic Monitoring, all of that data already exists. This app is a thin,
 read-only public view over it:
 
@@ -63,10 +63,10 @@ this is purely the live uptime and latency view.
 
 ## What it looks like
 
-| Page | Route | Shows |
-| --- | --- | --- |
-| Overview | `/` | All services, current status, uptime across windows, search |
-| Service detail | `/site/<id>` | One service: uptime bars + response-time chart |
+| Page           | Route        | Shows                                                       |
+| -------------- | ------------ | ----------------------------------------------------------- |
+| Overview       | `/`          | All services, current status, uptime across windows, search |
+| Service detail | `/site/<id>` | One service: uptime bars + response-time chart              |
 
 > **Tip:** Want to see the UI before wiring up Grafana? It ships with realistic
 > sample data. Just run `pnpm install && pnpm dev` — see [Preview without
@@ -81,7 +81,7 @@ this is purely the live uptime and latency view.
 - **Node.js 24+** and **[pnpm](https://pnpm.io) 11+** (`corepack enable` will
   give you the right pnpm version automatically).
 - A **Grafana Cloud** stack with **Synthetic Monitoring** enabled and at least
-  one check running. *(Optional for previewing — see below.)*
+  one check running. _(Optional for previewing — see below.)_
 
 ### 1. Install
 
@@ -101,11 +101,11 @@ Open `.env.local` and fill in your Grafana Cloud Prometheus details. From
 **Grafana Cloud → your stack → Prometheus → Details** (or **Administration →
 Users and access → Cloud access policies**):
 
-| Variable | Where to find it |
-| --- | --- |
-| `GRAFANA_PROM_URL` | The **query URL**, *including* the `/api/prom` suffix — e.g. `https://prometheus-prod-24-prod-eu-west-2.grafana.net/api/prom` |
-| `GRAFANA_PROM_USER` | The numeric **metrics instance ID** (used as the basic-auth username) |
-| `GRAFANA_PROM_TOKEN` | An **Access Policy token** scoped `metrics:read` (create the policy, then a token under it) |
+| Variable             | Where to find it                                                                                                              |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `GRAFANA_PROM_URL`   | The **query URL**, _including_ the `/api/prom` suffix — e.g. `https://prometheus-prod-24-prod-eu-west-2.grafana.net/api/prom` |
+| `GRAFANA_PROM_USER`  | The numeric **metrics instance ID** (used as the basic-auth username)                                                         |
+| `GRAFANA_PROM_TOKEN` | An **Access Policy token** scoped `metrics:read` (create the policy, then a token under it)                                   |
 
 Every other setting is optional and has a sensible default. See the full
 [**Configuration reference**](docs/configuration.md) for branding, thresholds,
@@ -114,7 +114,7 @@ caching, and metric-name overrides.
 ### 3. Verify your stack (recommended)
 
 Different Grafana stacks can expose slightly different metric names. This script
-queries *your* stack and tells you exactly what it found — run it before relying
+queries _your_ stack and tells you exactly what it found — run it before relying
 on live data:
 
 ```bash
@@ -152,22 +152,22 @@ All configuration is via environment variables, read once in
 [**full reference**](docs/configuration.md) documents every option, its default,
 and when to change it.
 
-| Variable | Default | Purpose |
-| --- | --- | --- |
-| `GRAFANA_PROM_URL` | — | Prometheus query base URL (incl. `/api/prom`) |
-| `GRAFANA_PROM_USER` | — | Metrics instance ID (basic-auth user) |
-| `GRAFANA_PROM_TOKEN` | — | Access policy token, `metrics:read` |
-| `MOCK` | unset | Set to `1` to force sample data |
-| `NEXT_PUBLIC_SITE_NAME` | `Code for Africa` | Name shown in the header and title |
-| `NEXT_PUBLIC_SITE_TAGLINE` | `Status of our public services` | Sub-heading text |
-| `UPTIME_OPERATIONAL` | `99.9` | Uptime % at/above which a service is green |
-| `UPTIME_DEGRADED` | `95` | Uptime % at/above which a service is amber (red below) |
-| `CURRENT_WINDOW` | `1h` | Window used to decide current up/down |
-| `METRICS_CACHE_SECONDS` | `60` | Metrics-cache window (seconds) for Grafana queries; see note below |
-| `METRICS_RETENTION_DAYS` | unset | Metrics retention in days; longer windows show insufficient coverage and charts clamp to retained data |
-| `SM_GROUP_LABEL` | unset | Group the overview by this Grafana custom label (read from `label_<name>`); unset ⇒ flat list |
-| `SM_PURPOSE_LABEL` | unset | Optional secondary label shown as a compact chip on each row (e.g. `API`) |
-| `SM_METRIC_*` | SM schema defaults | Override metric names if your stack differs |
+| Variable                   | Default                         | Purpose                                                                                                |
+| -------------------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `GRAFANA_PROM_URL`         | —                               | Prometheus query base URL (incl. `/api/prom`)                                                          |
+| `GRAFANA_PROM_USER`        | —                               | Metrics instance ID (basic-auth user)                                                                  |
+| `GRAFANA_PROM_TOKEN`       | —                               | Access policy token, `metrics:read`                                                                    |
+| `MOCK`                     | unset                           | Set to `1` to force sample data                                                                        |
+| `NEXT_PUBLIC_SITE_NAME`    | `Code for Africa`               | Name shown in the header and title                                                                     |
+| `NEXT_PUBLIC_SITE_TAGLINE` | `Status of our public services` | Sub-heading text                                                                                       |
+| `UPTIME_OPERATIONAL`       | `99.9`                          | Uptime % at/above which a service is green                                                             |
+| `UPTIME_DEGRADED`          | `95`                            | Uptime % at/above which a service is amber (red below)                                                 |
+| `CURRENT_WINDOW`           | `1h`                            | Window used to decide current up/down                                                                  |
+| `METRICS_CACHE_SECONDS`    | `60`                            | Metrics-cache window (seconds) for Grafana queries; see note below                                     |
+| `METRICS_RETENTION_DAYS`   | unset                           | Metrics retention in days; longer windows show insufficient coverage and charts clamp to retained data |
+| `SM_GROUP_LABEL`           | unset                           | Group the overview by this Grafana custom label (read from `label_<name>`); unset ⇒ flat list          |
+| `SM_PURPOSE_LABEL`         | unset                           | Optional secondary label shown as a compact chip on each row (e.g. `API`)                              |
+| `SM_METRIC_*`              | SM schema defaults              | Override metric names if your stack differs                                                            |
 
 > ⚠️ Anything prefixed `NEXT_PUBLIC_` is shipped to the browser. The Grafana
 > credentials deliberately have **no** such prefix and stay server-side. Never

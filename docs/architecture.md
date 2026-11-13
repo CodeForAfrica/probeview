@@ -31,15 +31,15 @@ already-computed numbers and markup.
 
 ## Modules
 
-| Module | Responsibility |
-| --- | --- |
-| [`lib/config.ts`](../lib/config.ts) | All environment-driven configuration, read once. Decides mock vs. live. |
-| [`lib/prometheus.ts`](../lib/prometheus.ts) | Cached HTTP client for the Prometheus query API. `instantQuery` (point-in-time) and `rangeQuery` (time series). `escapeLabel` for safe PromQL. |
+| Module                                      | Responsibility                                                                                                                                                                                                                         |
+| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`lib/config.ts`](../lib/config.ts)         | All environment-driven configuration, read once. Decides mock vs. live.                                                                                                                                                                |
+| [`lib/prometheus.ts`](../lib/prometheus.ts) | Cached HTTP client for the Prometheus query API. `instantQuery` (point-in-time) and `rangeQuery` (time series). `escapeLabel` for safe PromQL.                                                                                         |
 | [`lib/synthetics.ts`](../lib/synthetics.ts) | Domain layer. `listChecks()` discovers services from `sm_check_info` (incl. optional `group`/`purpose` from custom labels); `getOverview()` computes status + uptime across windows; `getSiteHistory()` builds the detail-page series. |
-| [`lib/mock.ts`](../lib/mock.ts) | Representative sample data used when credentials are absent or `MOCK=1`. |
-| [`lib/buckets.ts`](../lib/buckets.ts) | Bucketing helpers for the uptime history strip. |
-| [`lib/types.ts`](../lib/types.ts) | Shared types: `Status`, `WindowKey`, `Check`, `CheckStatus`, etc. |
-| [`components/`](../components) | Presentational components. Charts (`ResponseTimeChart`, `UptimeBars`) are **hand-rolled SVG** — no charting library. |
+| [`lib/mock.ts`](../lib/mock.ts)             | Representative sample data used when credentials are absent or `MOCK=1`.                                                                                                                                                               |
+| [`lib/buckets.ts`](../lib/buckets.ts)       | Bucketing helpers for the uptime history strip.                                                                                                                                                                                        |
+| [`lib/types.ts`](../lib/types.ts)           | Shared types: `Status`, `WindowKey`, `Check`, `CheckStatus`, etc.                                                                                                                                                                      |
+| [`components/`](../components)              | Presentational components. Charts (`ResponseTimeChart`, `UptimeBars`) are **hand-rolled SVG** — no charting library.                                                                                                                   |
 
 ## Key decisions
 
@@ -58,14 +58,13 @@ already-computed numbers and markup.
   interleaved among the groups by the active sort.
   See [`configuration.md`](configuration.md#grouping-by-custom-label).
 
-
 - **Check ids identify a `(job, target)` pair, not a job name.** Grafana defines
   a check's identity as job name + target, so two checks can share a job name (or
   two job names can normalize to the same slug, e.g. `Public API` and
   `Public-API`). Each check's id is therefore `<job-slug>-<hash>`, where the hash
   is a stable digest of the full `(job, target)` identity - see `checkId()` in
   [`lib/format.ts`](../lib/format.ts). Because the hash depends only on the
-  check's own identity, an id never changes when some *other* check is added,
+  check's own identity, an id never changes when some _other_ check is added,
   removed, or renamed; it only changes if that check's own job or target changes.
   The readable slug leads so `/site/<id>` URLs stay scannable and sort by service
   name. Migration note: ids are `slug-hash`, not a bare slug, so any externally
@@ -111,9 +110,9 @@ already-computed numbers and markup.
 
 ## Routes
 
-| Route | File | Purpose |
-| --- | --- | --- |
-| `/` | `app/page.tsx` | Overview of all services with search. |
+| Route        | File                     | Purpose                                        |
+| ------------ | ------------------------ | ---------------------------------------------- |
+| `/`          | `app/page.tsx`           | Overview of all services with search.          |
 | `/site/<id>` | `app/site/[id]/page.tsx` | Per-service uptime bars + response-time chart. |
 
 ## Extending it

@@ -1,4 +1,5 @@
 ---
+
 name: Bug report
 about: Something isn't working as expected
 title: "[Bug] "
@@ -23,8 +24,8 @@ What you expected to happen instead.
 
 - App version / commit:
 - Node version:
-- Running mode: [ ] live (Grafana) [ ] sample data (`MOCK=1` / no creds)
-- Host: [ ] local [ ] Vercel [ ] other (specify)
+- Running mode: [] live (Grafana) [] sample data (`MOCK=1` / no creds)
+- Host: [] local [] Vercel [] other (specify)
 
 ## Diagnostics
 

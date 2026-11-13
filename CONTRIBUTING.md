@@ -63,7 +63,7 @@ A change is ready when all of the above pass.
 2. Make your change, with tests and docs as needed.
 3. Ensure all checks above pass.
 4. Open a PR using the [template](.github/PULL_REQUEST_TEMPLATE.md). Describe
-   *what* changed and *why*, and link any related issue.
+   _what_ changed and _why_, and link any related issue.
 5. A maintainer will review. Please be responsive to feedback — small, focused
    PRs are reviewed fastest.
 
